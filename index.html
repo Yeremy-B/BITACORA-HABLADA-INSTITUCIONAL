@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitácora Hablada 2.0</title>
+<meta name="theme-color" content="#1f5e5b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bitácora">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/style.css">
+
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <span class="brand-mark"></span><h1>Bitácora Hablada</h1>
+    <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Cerrar menú">✕</button>
+  </div>
+  <div class="brand-sub">gestión documental · voz · productividad</div>
+
+  <!-- Workspace Selector -->
+  <div class="workspace-selector-wrapper">
+    <div class="workspace-selector-label">Espacio de trabajo</div>
+    <div class="workspace-toggle" id="workspaceToggle" role="group" aria-label="Espacio de trabajo">
+      <button class="workspace-btn active" id="wsPersonalBtn" type="button" title="Notas personales y proyectos propios">
+        <span class="ws-icon">👤</span>
+        <span class="ws-text">Personal</span>
+      </button>
+      <button class="workspace-btn" id="wsEnterpriseBtn" type="button" title="Departamentos, actas, minutas y equipo">
+        <span class="ws-icon">🏢</span>
+        <span class="ws-text">Institucional</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="folders-header-row">
+    <div class="folders-label" id="foldersSectionLabel">Carpetas</div>
+    <button class="sidebar-action-pill" id="manageTeamBtn" type="button" title="Administrar miembros del equipo" style="display:none;">
+      👥 Equipo
+    </button>
+  </div>
+  
+  <ul class="folder-list" id="folderList"></ul>
+
+  <div class="new-folder">
+    <input type="text" id="newFolderInput" placeholder="Nueva carpeta o departamento…" maxlength="40">
+    <button id="addFolderBtn" title="Crear carpeta o departamento">+</button>
+  </div>
+
+  <div class="sidebar-foot">
+    <p id="sidebarFootHelp">Todo lo que escribes se guarda automáticamente en tu carpeta activa, incluso si cierras la aplicación.</p>
+    <div class="sidebar-tools">
+      <button class="sidebar-tool-btn" id="letterheadConfigBtn" style="display:none;" title="Configurar membrete institucional">🏛️ Membrete oficial</button>
+      <button class="sidebar-tool-btn" id="trashBtn">🗑️ Papelera <span id="trashCount"></span></button>
+      <button class="sidebar-tool-btn" id="exportBtn">💾 Exportar respaldo</button>
+      <button class="sidebar-tool-btn" id="importBtn">📥 Importar respaldo</button>
+      <input type="file" id="importFileInput" accept="application/json" hidden>
+    </div>
+    <div class="sidebar-version">
+      <span id="sidebarWorkspaceBadge">Espacio Personal</span>
+      <span class="sidebar-version-badge">v2.5 Empresarial</span>
+    </div>
+  </div>
+</aside>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<div class="folder-preview-flyout" id="folderPreviewFlyout"></div>
+
+<div class="move-menu" id="moveMenu"></div>
+
+<div class="modal-overlay" id="trashOverlay">
+  <div class="modal-box trash-box">
+    <h4>🗑️ Papelera</h4>
+    <p>Las notas eliminadas se guardan aquí. Puedes restaurarlas o borrarlas para siempre.</p>
+    <div id="trashList" class="trash-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="trashCloseBtn">Cerrar</button>
+      <button class="btn btn-danger" id="emptyTrashBtn">Vaciar papelera</button>
+    </div>
+  </div>
+</div>
+
+<div class="reading-overlay" id="readingOverlay">
+  <div class="reading-box">
+    <div class="reading-text" id="readingText"></div>
+    <button class="btn btn-stop" id="readingStopBtn">⏹ Detener lectura</button>
+  </div>
+</div>
+
+<main>
+  <div class="topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Abrir carpetas">☰</button>
+    <div class="topbar-text">
+      <div class="topbar-meta-row">
+        <span class="topbar-workspace-tag" id="topbarWorkspaceTag">👤 Personal</span>
+        <span class="topbar-eyebrow" id="folderEyebrow">carpeta activa</span>
+      </div>
+      <h2 id="folderTitle">General</h2>
+    </div>
+    <div class="topbar-right-controls">
+      <div class="user-auth-widget" id="userAuthWidget">
+        <button class="btn btn-ghost user-login-trigger-btn" id="userLoginTriggerBtn" type="button" title="Conectar cuenta personal o institucional">
+          <span class="user-auth-icon">👤</span>
+          <span class="user-auth-label" id="userAuthLabel">Iniciar sesión</span>
+        </button>
+        <div class="user-profile-dropdown" id="userProfileDropdown" style="display:none;">
+          <div class="user-profile-head">
+            <div class="user-avatar" id="userAvatar">👤</div>
+            <div class="user-info">
+              <div class="user-name" id="userDisplayName">Usuario</div>
+              <div class="user-email" id="userEmail">correo@ejemplo.com</div>
+              <span class="user-badge" id="userAccountBadge">Personal</span>
+            </div>
+          </div>
+          <div class="user-profile-divider"></div>
+          <div class="user-profile-item" id="syncStatusItem">
+            <span class="sync-icon">☁️</span>
+            <span class="sync-text" id="syncStatusText">Sincronizado en la nube</span>
+          </div>
+          <div class="user-profile-divider"></div>
+          <button class="user-profile-logout-btn" id="userLogoutBtn" type="button">
+            🚪 Cerrar sesión
+          </button>
+        </div>
+      </div>
+      <button class="theme-toggle-btn" id="themeToggleBtn" type="button" aria-label="Alternar modo claro u oscuro" title="Cambiar a modo oscuro">
+        <span class="theme-icon" id="themeIcon">🌙</span>
+        <span class="theme-text" id="themeText">Modo oscuro</span>
+      </button>
+    </div>
+  </div>
+
+  <nav class="mobile-tabs" id="mobileTabs" aria-label="Vistas principales">
+    <button class="mobile-tab-btn active" id="tabEditorBtn" type="button">
+      <span>✏️ Escribir</span>
+    </button>
+    <button class="mobile-tab-btn" id="tabPlanBtn" type="button" style="display:none;">
+      <span>📌 Planificación</span>
+    </button>
+    <button class="mobile-tab-btn" id="tabNotesBtn" type="button">
+      <span id="tabNotesLabel">🗒️ Notas</span>
+      <span class="mobile-tab-badge" id="mobileNotesBadge">0</span>
+    </button>
+  </nav>
+
+  <div class="content">
+    <!-- 1. PANE LIMPIO: ESCRIBIR (EDITOR) -->
+    <div class="editor-pane" id="editorPane">
+      <textarea id="editor" placeholder="Escribe aquí lo que quieras que la voz lea… o pulsa «Dictar» para hablar y que se escriba solo."></textarea>
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button class="btn btn-primary" id="playBtn">🔊 Leer en voz alta</button>
+          <button class="btn btn-stop" id="stopBtn" disabled>⏹ Detener</button>
+          <div class="editor-options-wrapper" id="editorOptionsWrapper">
+            <button class="btn btn-more-options" id="editorOptionsBtn" type="button" aria-label="Más opciones" title="Opciones del editor">⋮</button>
+            <div class="editor-options-menu" id="editorOptionsMenu">
+              <div class="options-menu-header">Opciones del editor</div>
+              <div class="options-menu-item" id="autoSaveOptionRow">
+                <div class="options-menu-item-text">
+                  <div class="options-menu-title">Guardado automático</div>
+                  <div class="options-menu-desc" id="autoSaveStatusLabel">Activado (guarda al escribir)</div>
+                </div>
+                <label class="toggle-switch" for="autoSaveCheckbox" title="Activar o desactivar guardado automático">
+                  <input type="checkbox" id="autoSaveCheckbox" checked>
+                  <span class="toggle-track"></span>
+                </label>
+              </div>
+              <div class="options-menu-divider" id="optionsMenuDivider"></div>
+              <div class="options-menu-item options-menu-action" id="formalPrintOptionRow" role="button" tabindex="0" title="Ver documento formal con membrete y opción de imprimir o guardar como PDF">
+                <div class="options-menu-item-text">
+                  <div class="options-menu-title">🏛️ Membrete oficial / PDF</div>
+                  <div class="options-menu-desc">Formato formal con folio, sellos y firmas</div>
+                </div>
+                <span class="options-menu-action-icon">➔</span>
+              </div>
+            </div>
+          </div>
+          <div class="waveform" id="waveform">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group">
+          <button class="btn btn-dictate" id="dictateBtn">🎙️ Dictar</button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group">
+          <button class="btn btn-save" id="saveBtn">💾 Guardar nota</button>
+          <button class="btn btn-clear" id="clearBtn" title="Vaciar el editor">🧹 Borrar todo</button>
+        </div>
+
+        <div class="toolbar-right">
+          <select class="voice-select" id="voiceSelect"></select>
+          <button class="btn btn-ghost" id="previewVoiceBtn" title="Probar esta voz">👂 Probar</button>
+        </div>
+      </div>
+      <div class="tags-row">
+        <span class="tags-row-label">🏷️ Etiquetas:</span>
+        <input type="text" id="tagsInput" placeholder="ideas, trabajo, personal… (separadas por coma)" maxlength="120">
+      </div>
+      <div class="status-line" id="statusLine"></div>
+    </div>
+
+    <!-- 2. PANE DEDICADO: PLANIFICACIÓN & CONTROL INSTITUCIONAL -->
+    <div class="plan-pane" id="planPane" style="display:none;">
+      <div class="plan-pane-header">
+        <div class="plan-header-title-box">
+          <h3>📌 Planificación & Control Institucional</h3>
+          <p class="plan-header-sub">Configura el folio, responsable, plazos, estado y carga plantillas para la bitácora actual.</p>
+        </div>
+        <div class="plan-header-badge-box">
+          <span class="meta-folio-pill" id="currentFolioBadge">Folio: Auto</span>
+        </div>
+      </div>
+
+      <!-- Institutional Templates Bar -->
+      <div class="plan-section-card" id="templatesBar">
+        <div class="plan-card-header">
+          <span class="templates-label">📋 Plantillas institucionales preconfiguradas:</span>
+          <span class="templates-sub">Inserta una estructura formal en el editor</span>
+        </div>
+        <div class="templates-chips-row">
+          <button class="template-chip" data-template="minuta" type="button" title="Minuta de reunión ejecutiva o técnica">
+            <span>📋 Minuta de Reunión</span>
+          </button>
+          <button class="template-chip" data-template="incidencia" type="button" title="Reporte de incidente o inspección en terreno">
+            <span>⚠️ Reporte de Incidencia</span>
+          </button>
+          <button class="template-chip" data-template="acta" type="button" title="Acta formal de acuerdos y resoluciones">
+            <span>📜 Acta de Acuerdos</span>
+          </button>
+          <button class="template-chip" data-template="turno" type="button" title="Bitácora de turno, relevo y novedades operativas">
+            <span>⏱️ Bitácora de Turno</span>
+          </button>
+          <button class="template-chip" data-template="inspeccion" type="button" title="Pauta de inspección y auditoría de calidad">
+            <span>🔍 Inspección en Terreno</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Enterprise Metadata & Task Controls -->
+      <div class="plan-section-card" id="metaDrawer">
+        <div class="plan-card-header">
+          <div class="meta-drawer-title">
+            <span>🏛️ Control Documental, Responsable & Plazos</span>
+          </div>
+          <button class="sidebar-action-pill" id="planManageTeamBtn" type="button" title="Agregar o editar integrantes del equipo">
+            👥 Gestionar equipo
+          </button>
+        </div>
+        <div class="meta-drawer-body" id="metaDrawerBody">
+          <div class="meta-grid">
+            <div class="meta-field">
+              <label for="docTypeSelect">Tipo de documento:</label>
+              <select id="docTypeSelect" class="meta-input meta-select">
+                <option value="general">📝 Nota general</option>
+                <option value="minuta">📋 Minuta de reunión</option>
+                <option value="incidencia">⚠️ Reporte de incidencia</option>
+                <option value="acta">📜 Acta de acuerdos</option>
+                <option value="turno">⏱️ Bitácora de turno</option>
+                <option value="inspeccion">🔍 Inspección técnica</option>
+              </select>
+            </div>
+            <div class="meta-field">
+              <label for="docFolioInput">Código / Folio institucional:</label>
+              <div class="meta-input-group">
+                <input type="text" id="docFolioInput" class="meta-input" placeholder="Ej. DIR-2026-001" maxlength="30">
+                <button type="button" id="genFolioBtn" class="meta-addon-btn" title="Generar código automático">⚡ Auto</button>
+              </div>
+            </div>
+            <div class="meta-field">
+              <label for="taskAssigneeSelect">Responsable asignado:</label>
+              <select id="taskAssigneeSelect" class="meta-input meta-select">
+                <option value="">-- Sin asignar --</option>
+              </select>
+            </div>
+            <div class="meta-field">
+              <label for="taskDueDate">Fecha límite / Plazo:</label>
+              <input type="date" id="taskDueDate" class="meta-input">
+            </div>
+            <div class="meta-field">
+              <label for="taskPrioritySelect">Nivel de prioridad:</label>
+              <select id="taskPrioritySelect" class="meta-input meta-select">
+                <option value="normal">🟢 Normal</option>
+                <option value="media">🟡 Media</option>
+                <option value="alta">🟠 Alta</option>
+                <option value="urgente">🔴 Urgente / Crítica</option>
+              </select>
+            </div>
+            <div class="meta-field">
+              <label for="taskStatusSelect">Estado del trámite / tarea:</label>
+              <select id="taskStatusSelect" class="meta-input meta-select">
+                <option value="pendiente">⏳ Pendiente</option>
+                <option value="en_progreso">🔄 En progreso</option>
+                <option value="completado">✅ Completado</option>
+                <option value="archivado">📦 Archivado</option>
+              </select>
+            </div>
+            <div class="meta-field meta-field-full">
+              <label for="docAttendeesInput">Asistentes / Convocados / Participantes:</label>
+              <input type="text" id="docAttendeesInput" class="meta-input" placeholder="Ej. Ana Pérez (Dirección), Carlos Ruiz (Operaciones)..." maxlength="200">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action bar inside Planning -->
+      <div class="plan-actions-bar">
+        <button class="btn btn-primary" id="goToEditorBtn" type="button">
+          <span>✏️ Ir al Editor a Redactar</span>
+        </button>
+        <button class="btn btn-ghost" id="planOpenLetterheadBtn" type="button">
+          <span>🏛️ Ver Membrete / PDF</span>
+        </button>
+        <button class="btn btn-save" id="planSaveReportBtn" type="button">
+          <span>💾 Guardar Reporte</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. PANE: NOTAS Y REPORTES GUARDADOS -->
+    <div class="notes-pane" id="notesPane">
+      <div class="notes-pane-header">
+        <div class="notes-header-left">
+          <h3 id="notesPaneTitle">Notas guardadas</h3>
+          <span class="notes-count-badge" id="notesCount">0 notas</span>
+        </div>
+        <button class="mobile-new-note-btn" id="mobileNewNoteBtn" type="button">
+          <span>＋ Nueva nota</span>
+        </button>
+      </div>
+
+      <div class="search-row">
+        <div class="search-input-wrapper">
+          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar en las notas o folios…">
+          <button class="search-clear-btn" id="searchClearBtn" style="display:none;" title="Limpiar búsqueda" type="button">✕</button>
+        </div>
+        <label class="search-global-toggle">
+          <input type="checkbox" id="searchGlobalCheckbox">
+          <span id="searchGlobalLabel">Todas las carpetas</span>
+        </label>
+      </div>
+
+      <div class="notes-controls">
+        <div class="notes-controls-top">
+          <div class="sort-select-wrapper">
+            <label class="sort-select-label" for="sortSelect">Orden:</label>
+            <select class="sort-select" id="sortSelect" aria-label="Ordenar notas">
+              <option value="recientes">⏱️ Más recientes primero</option>
+              <option value="antiguas">📅 Más antiguas primero</option>
+              <option value="alfabetico">🔤 Alfabético (A-Z)</option>
+              <option value="prioridad">🔥 Por prioridad</option>
+              <option value="plazo">📅 Por fecha límite</option>
+            </select>
+          </div>
+          <div class="view-mode-toggle" id="viewModeToggle" role="group" aria-label="Modo de vista">
+            <button class="view-mode-btn active" id="viewModeDetailedBtn" title="Vista previa detallada con extracto y estadísticas" type="button">
+              <span>🖼️ Previa</span>
+            </button>
+            <button class="view-mode-btn" id="viewModeCompactBtn" title="Vista compacta de lista" type="button">
+              <span>📑 Lista</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Enterprise Task Filters Row (Visible in enterprise workspace) -->
+        <div class="enterprise-filters-row" id="enterpriseFiltersRow" style="display:none;">
+          <div class="filter-pill-group" id="statusFilterPills">
+            <button class="filter-pill active" data-filter="all">Todos</button>
+            <button class="filter-pill" data-filter="pendiente">⏳ Pendientes</button>
+            <button class="filter-pill" data-filter="en_progreso">🔄 En progreso</button>
+            <button class="filter-pill" data-filter="completado">✅ Completados</button>
+          </div>
+        </div>
+
+        <div class="tag-filter-row" id="tagFilterRow"></div>
+      </div>
+
+      <div id="notesList"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Vista Formal con Membrete Corporativo (Impresión / PDF) -->
+<div class="modal-overlay" id="formalPrintOverlay">
+  <div class="modal-box formal-print-modal-box">
+    <div class="formal-print-modal-bar no-print">
+      <div class="formal-print-actions">
+        <button class="btn btn-primary" id="doPrintBtn" type="button">🖨️ Imprimir / Guardar como PDF</button>
+        <button class="btn btn-ghost" id="copyFormalTextBtn" type="button">📋 Copiar con formato oficial</button>
+        <button class="btn btn-ghost" id="editLetterheadFromPreviewBtn" type="button">⚙️ Editar membrete</button>
+      </div>
+      <button class="sidebar-close-btn" id="formalPrintCloseX" aria-label="Cerrar vista formal">✕</button>
+    </div>
+
+    <!-- Official Printable Sheet Layout -->
+    <div class="official-sheet" id="officialSheet">
+      <header class="sheet-header">
+        <div class="sheet-header-left">
+          <img id="sheetOrgLogo" class="sheet-org-logo" src="./app_icon.jpg" alt="Logo Institucional">
+          <div class="sheet-org-info">
+            <h1 class="sheet-org-name" id="sheetOrgName">ORGANIZACIÓN / INSTITUCIÓN</h1>
+            <h2 class="sheet-org-dept" id="sheetOrgDept">Dirección de Operaciones</h2>
+            <div class="sheet-org-sub" id="sheetOrgSub">Sistema de Bitácora y Control Documental</div>
+          </div>
+        </div>
+        <div class="sheet-header-right">
+          <div class="sheet-folio-box">
+            <span class="sheet-folio-label">FOLIO / CÓDIGO</span>
+            <span class="sheet-folio-val" id="sheetFolio">DIR-2026-001</span>
+          </div>
+          <div class="sheet-date-box">
+            <span class="sheet-date-label">FECHA DE EMISIÓN</span>
+            <span class="sheet-date-val" id="sheetDate">31 de Agosto de 2026</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="sheet-divider"></div>
+
+      <!-- Metadata Box -->
+      <div class="sheet-metadata-table">
+        <div class="sheet-meta-cell">
+          <span class="sheet-meta-label">Tipo de Documento:</span>
+          <span class="sheet-meta-value" id="sheetDocType">Minuta de Reunión</span>
+        </div>
+        <div class="sheet-meta-cell">
+          <span class="sheet-meta-label">Departamento / Área:</span>
+          <span class="sheet-meta-value" id="sheetDepartment">Operaciones</span>
+        </div>
+        <div class="sheet-meta-cell">
+          <span class="sheet-meta-label">Responsable Asignado:</span>
+          <span class="sheet-meta-value" id="sheetAssignee">Carlos Ruiz</span>
+        </div>
+        <div class="sheet-meta-cell">
+          <span class="sheet-meta-label">Fecha Límite / Plazo:</span>
+          <span class="sheet-meta-value" id="sheetDeadline">Sin fecha</span>
+        </div>
+        <div class="sheet-meta-cell">
+          <span class="sheet-meta-label">Prioridad:</span>
+          <span class="sheet-meta-value" id="sheetPriority">Alta</span>
+        </div>
+        <div class="sheet-meta-cell">
+          <span class="sheet-meta-label">Estado de Cumplimiento:</span>
+          <span class="sheet-meta-value" id="sheetStatus">En Progreso</span>
+        </div>
+        <div class="sheet-meta-cell sheet-meta-cell-full" id="sheetAttendeesRow">
+          <span class="sheet-meta-label">Asistentes / Convocados:</span>
+          <span class="sheet-meta-value" id="sheetAttendees">Todos los miembros</span>
+        </div>
+      </div>
+
+      <div class="sheet-content-wrapper">
+        <h2 class="sheet-doc-title" id="sheetDocTitle">Título del Documento</h2>
+        <div class="sheet-doc-body" id="sheetDocBody"></div>
+      </div>
+
+      <!-- Signatures Block -->
+      <div class="sheet-signatures-block">
+        <div class="sheet-signature-box">
+          <div class="sheet-sig-line"></div>
+          <div class="sheet-sig-name" id="sheetSigAuthorName">Responsable / Emisor</div>
+          <div class="sheet-sig-title" id="sheetSigAuthorTitle">Elaborado por</div>
+        </div>
+        <div class="sheet-signature-box">
+          <div class="sheet-sig-line"></div>
+          <div class="sheet-sig-name" id="sheetSigReviewerName">Jefatura / Dirección</div>
+          <div class="sheet-sig-title" id="sheetSigReviewerTitle">Revisado y Aprobado</div>
+        </div>
+        <div class="sheet-signature-box">
+          <div class="sheet-sig-stamp">
+            <span>TIMBRE / SELLO OFICIAL</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="sheet-footer">
+        <div class="sheet-footer-text" id="sheetFooterLegal">Documento oficial generado por Bitácora Hablada Empresarial. Confidencial y de uso interno.</div>
+        <div class="sheet-footer-page">Página 1 de 1</div>
+      </footer>
+    </div>
+
+    <div class="modal-actions no-print" style="margin-top: 16px;">
+      <button class="btn btn-cancel" id="formalPrintCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Configuración de Membrete Institucional -->
+<div class="modal-overlay" id="letterheadOverlay">
+  <div class="modal-box form-modal-box">
+    <div class="form-modal-header">
+      <h4>🏛️ Configuración de Membrete Institucional</h4>
+      <button class="sidebar-close-btn" id="letterheadCloseX" aria-label="Cerrar">✕</button>
+    </div>
+    <p>Personaliza los datos corporativos que aparecerán en la cabecera y membrete de todos los reportes, actas e impresiones PDF.</p>
+    
+    <form id="letterheadForm" class="letterhead-form">
+      <div class="form-group">
+        <label for="cfgOrgName">Nombre de la Institución / Empresa:</label>
+        <input type="text" id="cfgOrgName" class="form-input" placeholder="Ej. Gobierno Regional / Constructora Global S.A." required maxlength="80">
+      </div>
+      <div class="form-group">
+        <label for="cfgOrgDept">Dependencia / Unidad por defecto:</label>
+        <input type="text" id="cfgOrgDept" class="form-input" placeholder="Ej. Dirección General de Operaciones" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label for="cfgOrgSub">Subtítulo o Lema institucional:</label>
+        <input type="text" id="cfgOrgSub" class="form-input" placeholder="Ej. Sistema Institucional de Gestión y Control Documental" maxlength="120">
+      </div>
+      <div class="form-group">
+        <label for="cfgOrgLogo">URL del Logotipo o Emblema:</label>
+        <div class="input-with-upload">
+          <input type="text" id="cfgOrgLogo" class="form-input" placeholder="https://... o sube una imagen">
+          <label class="btn btn-ghost upload-logo-label" for="cfgLogoFile">
+            📁 Subir
+            <input type="file" id="cfgLogoFile" accept="image/*" style="display:none;">
+          </label>
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="cfgSigAuthor">Título Emisor (Firma 1):</label>
+          <input type="text" id="cfgSigAuthor" class="form-input" placeholder="Ej. Responsable de Turno / Inspector" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label for="cfgSigReviewer">Título Revisor (Firma 2):</label>
+          <input type="text" id="cfgSigReviewer" class="form-input" placeholder="Ej. Dirección General / Jefatura" maxlength="50">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="cfgFooterLegal">Texto de pie de página / Cláusula legal:</label>
+        <input type="text" id="cfgFooterLegal" class="form-input" placeholder="Ej. Documento Oficial. Prohibida su alteración sin autorización expresa." maxlength="160">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-cancel" id="letterheadCancelBtn">Cancelar</button>
+        <button type="submit" class="btn btn-save" id="letterheadSaveBtn">Guardar membrete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Administración de Equipo y Miembros -->
+<div class="modal-overlay" id="teamOverlay">
+  <div class="modal-box form-modal-box team-modal-box">
+    <div class="form-modal-header">
+      <h4>👥 Gestión de Equipo y Miembros</h4>
+      <button class="sidebar-close-btn" id="teamCloseX" aria-label="Cerrar">✕</button>
+    </div>
+    <p>Registra a los integrantes de tu equipo o institución para asignarlos como responsables en reportes, minutas y seguimiento de tareas.</p>
+
+    <!-- Add Member Form -->
+    <form id="addMemberForm" class="add-member-form">
+      <div class="form-row-3">
+        <div class="form-group">
+          <label for="memberFullName">Nombre y Apellido:</label>
+          <input type="text" id="memberFullName" class="form-input" placeholder="Ej. Ing. Valentina Soto" required maxlength="60">
+        </div>
+        <div class="form-group">
+          <label for="memberRole">Cargo / Rol:</label>
+          <input type="text" id="memberRole" class="form-input" placeholder="Ej. Jefa de Operaciones" required maxlength="50">
+        </div>
+        <div class="form-group">
+          <label for="memberDept">Departamento:</label>
+          <input type="text" id="memberDept" class="form-input" placeholder="Ej. Operaciones y Terreno" maxlength="50">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="addMemberBtn">＋ Agregar integrante</button>
+    </form>
+
+    <div class="team-list-section">
+      <h5>Integrantes registrados (<span id="teamMemberCount">0</span>)</h5>
+      <div class="team-list" id="teamList"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-cancel" id="teamCloseBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirmar aplicación de plantilla sobre texto existente -->
+<div class="modal-overlay" id="templateConfirmOverlay">
+  <div class="modal-box">
+    <h4>📋 ¿Aplicar plantilla institucional?</h4>
+    <p>Tu editor contiene texto. ¿Deseas reemplazar el contenido actual o anexar la plantilla al final?</p>
+    <div class="modal-actions template-confirm-actions">
+      <button class="btn btn-cancel" id="templateCancelBtn">Cancelar</button>
+      <button class="btn btn-ghost" id="templateAppendBtn">Anexar al final</button>
+      <button class="btn btn-danger" id="templateReplaceBtn">Reemplazar todo</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="quickPreviewOverlay">
+  <div class="modal-box preview-modal-box">
+    <div class="preview-modal-header">
+      <div class="preview-modal-badges" id="quickPreviewBadges"></div>
+      <button class="sidebar-close-btn" id="quickPreviewCloseX" style="display:block;" aria-label="Cerrar vista previa">✕</button>
+    </div>
+    <h3 class="preview-modal-title" id="quickPreviewTitle">Título de la nota</h3>
+    <div class="preview-modal-meta" id="quickPreviewMeta"></div>
+    <div class="preview-modal-content" id="quickPreviewContent"></div>
+    <div class="preview-modal-tags" id="quickPreviewTags"></div>
+    <div class="modal-actions preview-modal-actions">
+      <button class="btn btn-ghost" id="quickPreviewCopyBtn" type="button">📋 Copiar texto</button>
+      <button class="btn btn-primary" id="quickPreviewSpeakBtn" type="button">🔊 Leer en voz alta</button>
+      <button class="btn btn-save" id="quickPreviewEditBtn" type="button">✏️ Abrir en editor</button>
+      <button class="btn btn-cancel" id="quickPreviewCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Autenticación y Acceso (Personal / Institucional) -->
+<div class="modal-overlay" id="authModalOverlay">
+  <div class="modal-box auth-modal-box">
+    <div class="auth-modal-header">
+      <div class="auth-modal-title-box">
+        <h3>🔐 Iniciar Sesión / Conectar Cuenta</h3>
+        <p class="auth-modal-sub">Guarda y sincroniza tus notas, actas y membretes en la nube desde cualquier dispositivo.</p>
+      </div>
+      <button class="sidebar-close-btn" id="authModalCloseX" style="display:block;" aria-label="Cerrar modal">✕</button>
+    </div>
+
+    <!-- Smart Auto-detection banner -->
+    <div class="auth-info-banner">
+      <div class="auth-info-icon">💡</div>
+      <div class="auth-info-text">
+        <strong>Detección inteligente de cuenta:</strong>
+        <span>Si usas un correo institucional o corporativo (@empresa, @escuela), se activará automáticamente el espacio Institucional. Si usas Gmail o correo personal, ingresarás a tu espacio Privado.</span>
+      </div>
+    </div>
+
+    <!-- Provider Button: Google -->
+    <div class="auth-providers">
+      <button class="btn btn-google-auth" id="googleAuthBtn" type="button">
+        <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Continuar con Google</span>
+      </button>
+    </div>
+
+    <div class="auth-divider-line">
+      <span>o con correo y contraseña</span>
+    </div>
+
+    <!-- Email form -->
+    <form id="emailAuthForm" class="auth-email-form">
+      <div class="form-group" id="authNameGroup" style="display:none;">
+        <label for="authNameInput">Nombre completo / Cargo:</label>
+        <input type="text" id="authNameInput" class="form-input" placeholder="Ej. Juan Pérez - Jefe de Operaciones">
+      </div>
+      <div class="form-group">
+        <label for="authEmailInput">Correo electrónico (personal o institucional):</label>
+        <input type="email" id="authEmailInput" class="form-input" placeholder="nombre@organizacion.com o usuario@gmail.com" required>
+      </div>
+      <div class="form-group">
+        <label for="authPasswordInput">Contraseña:</label>
+        <input type="password" id="authPasswordInput" class="form-input" placeholder="••••••••" required minlength="6">
+      </div>
+
+      <div class="auth-error-msg" id="authErrorMsg" style="display:none;"></div>
+
+      <button type="submit" class="btn btn-primary btn-block-auth" id="emailAuthSubmitBtn">
+        Iniciar Sesión
+      </button>
+    </form>
+
+    <div class="auth-toggle-mode">
+      <span id="authTogglePrompt">¿No tienes cuenta?</span>
+      <button type="button" class="auth-link-btn" id="authToggleModeBtn">Crear una cuenta nueva</button>
+    </div>
+
+    <div class="modal-actions auth-modal-footer">
+      <button class="btn btn-cancel" id="authModalCloseBtn" type="button">Continuar sin cuenta (Modo Local)</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <h4 id="modalTitle">¿Eliminar?</h4>
+    <p id="modalText">Esta acción no se puede deshacer.</p>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="modalCancel">Cancelar</button>
+      <button class="btn btn-danger" id="modalConfirm">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+  <script type="module" src="./src/main.js"></script>
+
+</body>
+</html>

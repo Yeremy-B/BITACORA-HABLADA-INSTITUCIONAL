@@ -1,0 +1,10 @@
+{
+  "name": "Bitácora Hablada Empresarial",
+  "description": "Bitácora y sistema de gestión documental con dictado por voz, lectura asistida, espacios institucionales, departamentos, plantillas de actas y minutas, asignación de tareas y exportación con membrete formal.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "UserProfile": {
+      "collection": "users",
+      "fields": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "accountType": { "type": "string" },
+        "organizationDomain": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "lastLogin": { "type": "timestamp" }
+      }
+    },
+    "PersonalNote": {
+      "collection": "users/{userId}/notes",
+      "fields": {
+        "title": { "type": "string" },
+        "text": { "type": "string" },
+        "folder": { "type": "string" },
+        "tags": { "type": "array" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" },
+        "isTrash": { "type": "boolean" },
+        "workspace": { "type": "string" }
+      }
+    },
+    "InstitutionalReport": {
+      "collection": "reports",
+      "fields": {
+        "title": { "type": "string" },
+        "text": { "type": "string" },
+        "folder": { "type": "string" },
+        "tags": { "type": "array" },
+        "docType": { "type": "string" },
+        "folio": { "type": "string" },
+        "assignee": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "attendees": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "authorEmail": { "type": "string" },
+        "authorName": { "type": "string" },
+        "orgDomain": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" },
+        "isTrash": { "type": "boolean" }
+      }
+    }
+  }
+}
