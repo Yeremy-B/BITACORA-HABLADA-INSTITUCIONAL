@@ -1,0 +1,16 @@
+{
+  "name": "BH Enterprise",
+  "short_name": "BH Enterprise",
+  "description": "Plataforma empresarial de gestión documental, actas, minutas y bitácoras con dictado por voz y sincronización institucional.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#121b21",
+  "theme_color": "#1f5e5b",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

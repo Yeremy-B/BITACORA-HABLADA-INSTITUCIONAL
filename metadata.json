@@ -1,6 +1,6 @@
 {
-  "name": "Bitácora Hablada Empresarial",
-  "description": "Bitácora y sistema de gestión documental con dictado por voz, lectura asistida, espacios institucionales, departamentos, plantillas de actas y minutas, asignación de tareas y exportación con membrete formal.",
+  "name": "BH Enterprise",
+  "description": "Plataforma empresarial de gestión documental, actas, minutas y bitácoras con dictado por voz, autenticación institucional/personal y sincronización en la nube.",
   "requestFramePermissions": [
     "microphone"
   ],

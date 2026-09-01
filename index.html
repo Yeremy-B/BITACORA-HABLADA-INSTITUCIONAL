@@ -3,11 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bitácora Hablada 2.0</title>
+<title>BH Enterprise</title>
+<meta name="description" content="Plataforma empresarial de gestión documental, actas, minutas y bitácoras con dictado por voz, autenticación institucional/personal y sincronización en la nube.">
+<meta property="og:title" content="BH Enterprise">
+<meta property="og:description" content="Plataforma empresarial de gestión documental, actas, minutas y bitácoras con dictado por voz, autenticación institucional/personal y sincronización en la nube.">
 <meta name="theme-color" content="#1f5e5b">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Bitácora">
+<meta name="apple-mobile-web-app-title" content="BH Enterprise">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/png" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
@@ -20,7 +23,12 @@
 
 <aside class="sidebar" id="sidebar">
   <div class="brand">
-    <span class="brand-mark"></span><h1>Bitácora Hablada</h1>
+    <div class="brand-logo-badge" aria-hidden="true">
+      <span class="brand-logo-initials">BH</span>
+    </div>
+    <div class="brand-title-wrap">
+      <h1>Enterprise</h1>
+    </div>
     <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Cerrar menú">✕</button>
   </div>
   <div class="brand-sub">gestión documental · voz · productividad</div>
@@ -55,13 +63,12 @@
   </div>
 
   <div class="sidebar-foot">
-    <p id="sidebarFootHelp">Todo lo que escribes se guarda automáticamente en tu carpeta activa, incluso si cierras la aplicación.</p>
     <div class="sidebar-tools">
+      <button class="sidebar-tool-btn sidebar-settings-main-btn" id="settingsBtn" title="Configurar cuenta, apariencia, papelera y respaldos">
+        <span class="settings-btn-icon">⚙️</span>
+        <span class="settings-btn-label">Configuración</span>
+      </button>
       <button class="sidebar-tool-btn" id="letterheadConfigBtn" style="display:none;" title="Configurar membrete institucional">🏛️ Membrete oficial</button>
-      <button class="sidebar-tool-btn" id="trashBtn">🗑️ Papelera <span id="trashCount"></span></button>
-      <button class="sidebar-tool-btn" id="exportBtn">💾 Exportar respaldo</button>
-      <button class="sidebar-tool-btn" id="importBtn">📥 Importar respaldo</button>
-      <input type="file" id="importFileInput" accept="application/json" hidden>
     </div>
     <div class="sidebar-version">
       <span id="sidebarWorkspaceBadge">Espacio Personal</span>
@@ -75,6 +82,102 @@
 <div class="folder-preview-flyout" id="folderPreviewFlyout"></div>
 
 <div class="move-menu" id="moveMenu"></div>
+
+<!-- Modal: Configuración General -->
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal-box settings-modal-box">
+    <div class="modal-header-row">
+      <div class="modal-title-wrap">
+        <h4>⚙️ Configuración</h4>
+        <p class="modal-subtitle">Gestiona tu cuenta, tema visual, respaldos y papelera de Bitácora Hablada.</p>
+      </div>
+      <button class="sidebar-close-btn" id="settingsCloseX" style="display:block;" aria-label="Cerrar configuración">✕</button>
+    </div>
+
+    <!-- Sección 1: Cuenta y Nube -->
+    <div class="settings-group">
+      <div class="settings-group-title">👤 Cuenta y Sincronización</div>
+      <div class="settings-user-card" id="settingsUserCard">
+        <div class="settings-user-main">
+          <div class="user-avatar" id="userAvatar">👤</div>
+          <div class="user-info">
+            <div class="user-name" id="userDisplayName">Invitado</div>
+            <div class="user-email" id="userEmail">Modo local (sin sincronizar en la nube)</div>
+            <span class="user-badge badge-personal" id="userAccountBadge">Personal</span>
+          </div>
+        </div>
+        <div class="settings-user-actions">
+          <button class="btn btn-ghost user-login-trigger-btn" id="userLoginTriggerBtn" type="button" title="Conectar cuenta personal o institucional">
+            <span class="user-auth-icon">🔑</span>
+            <span class="user-auth-label" id="userAuthLabel">Iniciar sesión</span>
+          </button>
+          <button class="user-profile-logout-btn" id="userLogoutBtn" type="button" style="display:none;" title="Cerrar sesión">
+            🚪 Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección 2: Apariencia -->
+    <div class="settings-group">
+      <div class="settings-group-title">🎨 Apariencia y Tema</div>
+      <div class="settings-option-item">
+        <div class="settings-option-info">
+          <strong>Tema de interfaz</strong>
+          <span>Alterna entre modo oscuro y claro</span>
+        </div>
+        <button class="theme-toggle-btn" id="themeToggleBtn" type="button" aria-label="Alternar modo claro u oscuro" title="Cambiar tema">
+          <span class="theme-icon" id="themeIcon">🌙</span>
+          <span class="theme-text" id="themeText">Modo oscuro</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sección 3: Respaldos y Datos -->
+    <div class="settings-group">
+      <div class="settings-group-title">📦 Copia de Seguridad y Datos</div>
+      <div class="settings-actions-grid">
+        <div class="settings-action-card">
+          <div class="settings-action-info">
+            <strong>Exportar respaldo</strong>
+            <span>Descarga un archivo seguro con todas tus notas y carpetas</span>
+          </div>
+          <button class="btn btn-ghost settings-action-btn" id="exportBtn" type="button">
+            💾 Exportar JSON
+          </button>
+        </div>
+        <div class="settings-action-card">
+          <div class="settings-action-info">
+            <strong>Importar respaldo</strong>
+            <span>Restaura notas y carpetas desde un archivo previo</span>
+          </div>
+          <button class="btn btn-ghost settings-action-btn" id="importBtn" type="button">
+            📥 Importar JSON
+          </button>
+          <input type="file" id="importFileInput" accept="application/json" hidden>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección 4: Papelera -->
+    <div class="settings-group">
+      <div class="settings-group-title">🗑️ Mantenimiento</div>
+      <div class="settings-option-item">
+        <div class="settings-option-info">
+          <strong>Papelera de reciclaje</strong>
+          <span>Revisa o recupera notas eliminadas</span>
+        </div>
+        <button class="btn btn-ghost settings-action-btn" id="trashBtn" type="button">
+          🗑️ Abrir papelera <span id="trashCount"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="settingsCloseBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="trashOverlay">
   <div class="modal-box trash-box">
@@ -97,7 +200,7 @@
 
 <main>
   <div class="topbar">
-    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Abrir carpetas">☰</button>
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Abrir carpetas y configuración">☰</button>
     <div class="topbar-text">
       <div class="topbar-meta-row">
         <span class="topbar-workspace-tag" id="topbarWorkspaceTag">👤 Personal</span>
@@ -106,35 +209,9 @@
       <h2 id="folderTitle">General</h2>
     </div>
     <div class="topbar-right-controls">
-      <div class="user-auth-widget" id="userAuthWidget">
-        <button class="btn btn-ghost user-login-trigger-btn" id="userLoginTriggerBtn" type="button" title="Conectar cuenta personal o institucional">
-          <span class="user-auth-icon">👤</span>
-          <span class="user-auth-label" id="userAuthLabel">Iniciar sesión</span>
-        </button>
-        <div class="user-profile-dropdown" id="userProfileDropdown" style="display:none;">
-          <div class="user-profile-head">
-            <div class="user-avatar" id="userAvatar">👤</div>
-            <div class="user-info">
-              <div class="user-name" id="userDisplayName">Usuario</div>
-              <div class="user-email" id="userEmail">correo@ejemplo.com</div>
-              <span class="user-badge" id="userAccountBadge">Personal</span>
-            </div>
-          </div>
-          <div class="user-profile-divider"></div>
-          <div class="user-profile-item" id="syncStatusItem">
-            <span class="sync-icon">☁️</span>
-            <span class="sync-text" id="syncStatusText">Sincronizado en la nube</span>
-          </div>
-          <div class="user-profile-divider"></div>
-          <button class="user-profile-logout-btn" id="userLogoutBtn" type="button">
-            🚪 Cerrar sesión
-          </button>
-        </div>
+      <div class="topbar-brand-mark" title="BH Enterprise">
+        <span class="topbar-brand-logo">BH</span>
       </div>
-      <button class="theme-toggle-btn" id="themeToggleBtn" type="button" aria-label="Alternar modo claro u oscuro" title="Cambiar a modo oscuro">
-        <span class="theme-icon" id="themeIcon">🌙</span>
-        <span class="theme-text" id="themeText">Modo oscuro</span>
-      </button>
     </div>
   </div>
 
@@ -488,7 +565,7 @@
       </div>
 
       <footer class="sheet-footer">
-        <div class="sheet-footer-text" id="sheetFooterLegal">Documento oficial generado por Bitácora Hablada Empresarial. Confidencial y de uso interno.</div>
+        <div class="sheet-footer-text" id="sheetFooterLegal">Documento oficial generado por BH Enterprise. Confidencial y de uso institucional.</div>
         <div class="sheet-footer-page">Página 1 de 1</div>
       </footer>
     </div>

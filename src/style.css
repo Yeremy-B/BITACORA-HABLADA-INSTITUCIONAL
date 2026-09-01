@@ -221,9 +221,9 @@ body{
 }
 .brand{
   display:flex;
-  align-items:baseline;
-  gap:8px;
-  margin-bottom:4px;
+  align-items:center;
+  gap:10px;
+  margin-bottom:2px;
 }
 .sidebar-close-btn{
   display:none;
@@ -238,24 +238,55 @@ body{
 .sidebar-backdrop{
   display:none;
 }
-.brand-mark{
-  width:10px;height:10px;border-radius:50%;
-  background:var(--amber);
-  display:inline-block;
+.brand-logo-badge{
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  background:linear-gradient(135deg, var(--amber) 0%, #D97706 100%);
+  color:#121B21;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Fraunces', serif;
+  font-weight:700;
+  font-size:14px;
+  letter-spacing:-0.5px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.25);
   flex-shrink:0;
+}
+.brand-title-wrap{
+  display:flex;
+  align-items:baseline;
 }
 .brand h1{
   font-family:'Fraunces',serif;
-  font-weight:600;
-  font-size:22px;
+  font-weight:700;
+  font-size:20px;
   margin:0;
-  letter-spacing:-0.01em;
+  letter-spacing:-0.02em;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--text-on-ink);
+}
+.brand-enterprise-tag{
+  font-family:'Inter',sans-serif;
+  font-size:10px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  padding:2px 6px;
+  border-radius:4px;
+  background:rgba(230, 161, 93, 0.18);
+  color:var(--amber);
+  border:1px solid rgba(230, 161, 93, 0.35);
 }
 .brand-sub{
-  font-size:12px;
+  font-size:11px;
   color:var(--text-on-ink-muted);
-  margin:2px 0 28px 18px;
+  margin:4px 0 24px 0;
   font-family:'IBM Plex Mono',monospace;
+  letter-spacing:-0.2px;
 }
 .folders-label{
   font-size:11px;
@@ -420,6 +451,33 @@ body{
   flex-direction:column;
   gap:6px;
 }
+.sidebar-settings-main-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink-light);
+  border: 1px solid var(--ink-lighter);
+  color: var(--text-on-ink);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.sidebar-settings-main-btn:hover {
+  background: var(--ink-lighter);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.settings-btn-icon {
+  font-size: 15px;
+}
+
 .sidebar-tool-btn{
   background:var(--ink-light);
   border:1px solid var(--ink-lighter);
@@ -585,6 +643,267 @@ main{
   margin:0;
   letter-spacing:-0.01em;
 }
+/* Topbar Brand Mark */
+.topbar-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar-brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #111827;
+  color: #F97316;
+  border: 1.5px solid #F97316;
+  border-radius: 7px;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  user-select: none;
+}
+
+/* Settings Modal Styling */
+.settings-modal-box {
+  max-width: 460px;
+  width: 95%;
+}
+
+.modal-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title-wrap h4 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  color: var(--text-heading);
+}
+
+.modal-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.settings-group {
+  margin-bottom: 20px;
+  background: var(--paper-warm, rgba(0,0,0,0.02));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+body.dark-mode .settings-group {
+  background: var(--ink-light);
+  border-color: var(--ink-lighter);
+}
+
+body.dark-mode .settings-option-info strong {
+  color: #F6F2E9;
+}
+
+body.dark-mode .modal-title-wrap h4 {
+  color: #F6F2E9;
+}
+
+body.dark-mode .settings-user-actions .user-login-trigger-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #F6F2E9;
+}
+
+body.dark-mode .settings-user-actions .user-login-trigger-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.settings-group-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.settings-user-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-user-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-user-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-user-actions .user-login-trigger-btn,
+.settings-user-actions .user-profile-logout-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--paper-card);
+  border: 1px solid var(--border-darker);
+  color: var(--text-body);
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settings-user-actions .user-login-trigger-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber-dark);
+  background: var(--paper);
+}
+
+.settings-user-actions .user-login-trigger-btn.logged-in {
+  background: rgba(230, 161, 93, 0.12);
+  border-color: rgba(230, 161, 93, 0.4);
+  color: var(--amber-dark);
+}
+
+.settings-user-actions .user-profile-logout-btn {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #DC2626;
+}
+
+.settings-user-actions .user-profile-logout-btn:hover {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: #DC2626;
+}
+
+.settings-option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-option-info strong {
+  font-size: 13.5px;
+  color: var(--text-body);
+}
+
+.settings-option-info span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.settings-actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--paper-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: border-color 0.15s ease;
+}
+
+.settings-action-card:hover {
+  border-color: var(--border-darker);
+}
+
+.settings-action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-action-info strong {
+  font-size: 13px;
+  color: var(--text-body);
+}
+
+.settings-action-info span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.settings-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--paper-warm, #f8f6f0);
+  border: 1px solid var(--border-darker);
+  color: var(--text-body);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.settings-action-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber-dark);
+  background: var(--paper-card);
+}
+
+body.dark-mode .settings-action-card {
+  background: var(--ink);
+  border-color: var(--ink-lighter);
+}
+
+body.dark-mode .settings-action-info strong {
+  color: #F6F2E9;
+}
+
+body.dark-mode .settings-action-btn {
+  background: var(--ink-light);
+  border-color: var(--ink-lighter);
+  color: #F6F2E9;
+}
+
+body.dark-mode .settings-action-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
 .topbar-right-controls{
   margin-left:auto;
   display:flex;
@@ -1387,25 +1706,49 @@ body.dark .options-menu-action:hover{
   align-items:center;
 }
 
-/* ---------- CONFIRM MODAL ---------- */
+/* ---------- CONFIRM MODAL & GENERAL MODALS ---------- */
 .modal-overlay{
   position:fixed;inset:0;
-  background:rgba(30,42,51,0.45);
+  background:rgba(30,42,51,0.55);
+  backdrop-filter:blur(2px);
   display:flex;align-items:center;justify-content:center;
-  z-index:50;
+  z-index:150;
   opacity:0;pointer-events:none;
-  transition:opacity 0.15s ease;
+  transition:opacity 0.18s ease;
+  padding:20px 16px;
+  overflow-y:auto;
+  box-sizing:border-box;
 }
 .modal-overlay.open{opacity:1;pointer-events:auto;}
 .modal-box{
   background:var(--paper-card);
+  border:1px solid var(--border);
   border-radius:12px;
   padding:24px 26px;
-  max-width:340px;
-  width:90%;
-  box-shadow:0 12px 40px rgba(30,42,51,0.25);
-  transform:translateY(6px);
-  transition:transform 0.15s ease;
+  max-width:420px;
+  width:100%;
+  max-height:88vh;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  box-shadow:0 16px 48px rgba(0,0,0,0.22);
+  transform:translateY(8px);
+  transition:transform 0.18s ease;
+  box-sizing:border-box;
+  margin:auto;
+}
+.settings-modal-box{
+  max-width:540px;
+  width:100%;
+  max-height:88vh;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  padding:24px;
+}
+body.dark-mode .modal-box{
+  background:var(--ink);
+  border-color:var(--ink-lighter);
+  color:#F6F2E9;
+  box-shadow:0 16px 48px rgba(0,0,0,0.45);
 }
 .modal-overlay.open .modal-box{transform:translateY(0);}
 .modal-box h4{

@@ -50,7 +50,7 @@ import { collection, doc, setDoc, getDocs, deleteDoc, query, where, orderBy, onS
     orgLogo: './app_icon.jpg',
     sigAuthor: 'Responsable de Emisión / Inspector',
     sigReviewer: 'Dirección General / Jefatura',
-    footerLegal: 'Documento oficial generado por Bitácora Hablada Empresarial. Confidencial y de uso institucional.'
+    footerLegal: 'Documento oficial generado por BH Enterprise. Confidencial y de uso institucional.'
   };
 
   const INSTITUTIONAL_TEMPLATES = {
@@ -396,6 +396,12 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
     templateCancelBtn: document.getElementById('templateCancelBtn'),
     templateAppendBtn: document.getElementById('templateAppendBtn'),
     templateReplaceBtn: document.getElementById('templateReplaceBtn'),
+
+    // Settings Modal
+    settingsBtn: document.getElementById('settingsBtn'),
+    settingsOverlay: document.getElementById('settingsOverlay'),
+    settingsCloseX: document.getElementById('settingsCloseX'),
+    settingsCloseBtn: document.getElementById('settingsCloseBtn'),
 
     // Auth & Profile
     userAuthWidget: document.getElementById('userAuthWidget'),
@@ -2006,7 +2012,7 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
 
   el.playBtn.addEventListener('click', () => speakText());
   el.stopBtn.addEventListener('click', stopSpeaking);
-  el.previewVoiceBtn.addEventListener('click', () => speakText('Bitácora Hablada Empresarial. Sistema de gestión documental y voz.'));
+  el.previewVoiceBtn.addEventListener('click', () => speakText('BH Enterprise. Sistema de gestión documental y voz.'));
 
   // ==========================================================================
   // RESPALDO COMPLETO (EXPORTAR / IMPORTAR)
@@ -2014,7 +2020,7 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
   async function exportFullBackup(){
     setStatus('Generando respaldo institucional...');
     const backup = {
-      app: 'Bitácora Hablada Empresarial',
+      app: 'BH Enterprise',
       version: '2.5',
       exportedAt: new Date().toISOString(),
       workspace: state.workspace,
@@ -2047,7 +2053,7 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
     const a = document.createElement('a');
     const stamp = new Date().toISOString().slice(0,10);
     a.href = url;
-    a.download = `bitacora-empresarial-respaldo-${stamp}.json`;
+    a.download = `bh-enterprise-respaldo-${stamp}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -2200,10 +2206,14 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
   }
 
   el.trashBtn.addEventListener('click', () => {
+    if(el.settingsOverlay) el.settingsOverlay.classList.remove('open');
     renderTrashList();
     el.trashOverlay.classList.add('open');
   });
-  el.trashCloseBtn.addEventListener('click', () => el.trashOverlay.classList.remove('open'));
+  el.trashCloseBtn.addEventListener('click', () => {
+    el.trashOverlay.classList.remove('open');
+    if(el.settingsOverlay) el.settingsOverlay.classList.add('open');
+  });
   el.emptyTrashBtn.addEventListener('click', async () => {
     const ok = await askConfirm('¿Vaciar papelera?', 'Se eliminarán permanentemente todas las notas de la papelera.');
     if(!ok) return;
@@ -2212,28 +2222,52 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
     setStatus('Papelera vaciada');
   });
 
+  // Settings modal handlers
+  if(el.settingsBtn){
+    el.settingsBtn.addEventListener('click', () => {
+      if(el.settingsOverlay) el.settingsOverlay.classList.add('open');
+    });
+  }
+  if(el.settingsCloseX){
+    el.settingsCloseX.addEventListener('click', () => {
+      if(el.settingsOverlay) el.settingsOverlay.classList.remove('open');
+    });
+  }
+  if(el.settingsCloseBtn){
+    el.settingsCloseBtn.addEventListener('click', () => {
+      if(el.settingsOverlay) el.settingsOverlay.classList.remove('open');
+    });
+  }
+  if(el.settingsOverlay){
+    el.settingsOverlay.addEventListener('click', (e) => {
+      if(e.target === el.settingsOverlay) el.settingsOverlay.classList.remove('open');
+    });
+  }
+
   // ==========================================================================
   // MODO CLARO / OSCURO
   // ==========================================================================
   function initTheme(){
     const saved = localStorage.getItem('theme');
     if(saved === 'dark'){
-      document.body.classList.add('dark');
-      el.themeIcon.textContent = '☀️';
-      el.themeText.textContent = 'Modo claro';
+      document.body.classList.add('dark-mode');
+      if(el.themeIcon) el.themeIcon.textContent = '☀️';
+      if(el.themeText) el.themeText.textContent = 'Modo claro';
     } else {
-      document.body.classList.remove('dark');
-      el.themeIcon.textContent = '🌙';
-      el.themeText.textContent = 'Modo oscuro';
+      document.body.classList.remove('dark-mode');
+      if(el.themeIcon) el.themeIcon.textContent = '🌙';
+      if(el.themeText) el.themeText.textContent = 'Modo oscuro';
     }
   }
 
-  el.themeToggleBtn.addEventListener('click', () => {
-    const isDark = document.body.classList.toggle('dark');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    el.themeIcon.textContent = isDark ? '☀️' : '🌙';
-    el.themeText.textContent = isDark ? 'Modo claro' : 'Modo oscuro';
-  });
+  if(el.themeToggleBtn){
+    el.themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.body.classList.toggle('dark-mode');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      if(el.themeIcon) el.themeIcon.textContent = isDark ? '☀️' : '🌙';
+      if(el.themeText) el.themeText.textContent = isDark ? 'Modo claro' : 'Modo oscuro';
+    });
+  }
 
   // ==========================================================================
   // NAVEGACIÓN Y VISTAS DE PESTAÑAS (ESCRIBIR, PLANIFICACIÓN, NOTAS)
@@ -2348,18 +2382,11 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
   // AUTENTICACIÓN Y SINCRONIZACIÓN EN LA NUBE (OPCIÓN A)
   // ==========================================================================
   function setupAuthHandlers(){
-    // Open auth modal or dropdown
+    // Open auth modal
     if(el.userLoginTriggerBtn){
       el.userLoginTriggerBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if(state.currentUser){
-          // Toggle profile dropdown
-          const isVisible = el.userProfileDropdown.style.display === 'block';
-          el.userProfileDropdown.style.display = isVisible ? 'none' : 'block';
-        } else {
-          // Open Login Modal
-          openAuthModal();
-        }
+        openAuthModal();
       });
     }
 
@@ -2574,6 +2601,7 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
       const shortName = (user.displayName || user.email.split('@')[0]).split(' ')[0];
       
       el.userAuthLabel.textContent = isInst ? `🏢 ${shortName}` : `👤 ${shortName}`;
+      if(el.userLogoutBtn) el.userLogoutBtn.style.display = 'inline-flex';
       
       if(el.userDisplayName) el.userDisplayName.textContent = user.displayName || user.email;
       if(el.userEmail) el.userEmail.textContent = user.email;
@@ -2595,6 +2623,7 @@ Se fija un plazo de 72 horas para subsanar los puntos observados.`
     } else {
       el.userLoginTriggerBtn.classList.remove('logged-in');
       el.userAuthLabel.textContent = 'Iniciar sesión';
+      if(el.userLogoutBtn) el.userLogoutBtn.style.display = 'none';
       if(el.userAvatar) el.userAvatar.textContent = '👤';
       if(el.userDisplayName) el.userDisplayName.textContent = 'Invitado';
       if(el.userEmail) el.userEmail.textContent = 'Modo local';
