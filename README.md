@@ -1,44 +1,70 @@
-# 🎙️ Bitácora Hablada 2.0 (v2.0.0)
+# 🎙️ Bitácora Hablada Enterprise & Personal (v2.0.0)
 
-Una aplicación web progresiva (**PWA**) y moderna para la captura, organización, dictado y lectura de notas mediante la **Web Speech API** (reconocimiento y síntesis de voz). Diseñada para ofrecer persistencia local, respaldo en JSON y compatibilidad multiplataforma (móvil, tablet y escritorio).
+Una aplicación web progresiva (**PWA**) de alta fidelidad diseñada para la captura, dictado por voz, organización por departamentos y generación de reportes institucionales con respaldo en la nube (**Firebase Firestore & Authentication**) y almacenamiento local offline-first.
 
 ---
 
 ## ✨ Características Principales
 
-- 🎙️ **Dictado por Voz**: Transcripción de pensamientos y notas en tiempo real mediante `SpeechRecognition` nativo en español (`es-CL` / idioma local del navegador).
-- 💾 **Guardado Automático (Autosave)**: Todo lo que escribes o dictas se guarda automáticamente con debounce en tu carpeta activa sin riesgo de perder cambios.
-- 🔊 **Lectura de Notas en Voz Alta**: Síntesis de voz fluida (`SpeechSynthesis`) con selector de voces en español, acentos latinoamericanos y control de reproducción.
-- 📁 **Organización por Carpetas**: Clasifica y mueve tus notas entre diferentes categorías o proyectos personalizados.
-- 🗑️ **Papelera de Reciclaje**: Recupera notas eliminadas o vacíala definitivamente cuando lo desees (retención temporal de 30 días).
-- 🏷️ **Etiquetado y Búsqueda Rápida**: Filtra instantáneamente por texto, etiquetas (#tags) y fechas tanto en la carpeta actual como en todas las carpetas.
-- 📥/📤 **Respaldo y Restauración**: Exporta e importa todas tus carpetas y notas en formato JSON con un solo clic.
-- 📱 **PWA & Modo Offline**: Instalable en dispositivos Android, iOS y PC de escritorio. Utiliza Service Worker con estrategia de caché inteligente para cargar la interfaz y notas sin conexión a internet.
-- 🎨 **Diseño Editorial & Modo Oscuro/Claro**: Interfaz con tipografías Fraunces e IBM Plex Mono, animaciones de onda de sonido y adaptación a cualquier tamaño de pantalla.
+### 🎙️ Captura y Accesibilidad por Voz
+- **Dictado por Voz en Tiempo Real**: Transcripción rápida mediante `SpeechRecognition` nativo con detección de pausas y puntuación.
+- **Lectura en Voz Alta (TTS)**: Síntesis de voz fluida (`SpeechSynthesis`) con selector de voces en español y acentos latinoamericanos.
+- **Guardado Automático (Autosave)**: Guardado en caliente con debounce sin riesgo de pérdida de datos.
+
+### 🏢 Workspaces Duales (Personal e Institucional)
+- **Modo Personal**: Notas privadas, recordatorios, listas y carpetas individuales almacenadas en tu perfil privado `/users/{uid}/notes`.
+- **Modo Institucional / Enterprise**: Espacio colaborativo multitenant por dominio organizacional (`@institucion.gob.cl`, `@empresa.com`).
+  - Asignación de departamentos y folios automáticos (`ACT-2026-0001`, `OPE-2026-0001`, etc.).
+  - Gestión de prioridades (`Baja`, `Media`, `Alta`, `Urgente`) y estados (`Borrador`, `En Proceso`, `Revisado`, `Finalizado`).
+  - Asignación de responsables y seguimiento de plazos con selector de fecha de vencimiento.
+  - Membrete oficial personalizable (Logo, Organismo, Departamento, Ciudad/Región).
+  - Impresión formal y exportación a PDF con formato institucional estandarizado.
+
+### ☁️ Sincronización y Seguridad en la Nube (Firebase Firestore)
+- **Autenticación Segura**: Inicio de sesión mediante Google Popup y correo electrónico con contraseña.
+- **Verificación de Correo Obrigatoria**: Validación de dominio institucional (`email_verified == true`) para el acceso y lectura/escritura en la colección `/reports`.
+- **Papelera "Soft-Delete" Recuperable**: Las notas eliminadas se marcan con `isTrash: true` en Firestore y permanecen recuperables durante 30 días en cualquier dispositivo, borrándose definitivamente solo al vaciar la papelera.
+- **Escrituras Atómicas Optimizadas**: Actualizaciones quirúrgicas por documento (`persistSingleNote`) para máximo rendimiento y ahorro de cuota.
+- **Configuración Organizacional Compartida**: Los departamentos, miembros de equipo y membretes se sincronizan a nivel de dominio (`/orgs/{orgDomain}/config`).
+
+### 📱 PWA & Modo Offline
+- Instalable como aplicación nativa en Android, iOS, Windows y macOS.
+- **Service Worker con Caché Inteligente**: Acceso garantizado a la interfaz y notas en memoria local incluso sin conexión a internet.
+- **Respaldo Integral**: Exportación e importación completa en formato JSON.
 
 ---
 
-## 📂 Estructura del Proyecto
+## 📂 Arquitectura Modular
 
 ```text
 bitacora-hablada/
-├── index.html          # Estructura principal con rutas relativas compatibles con GitHub Pages
-├── vite.config.js      # Configuración de Vite con base relativa './'
+├── index.html              # Estructura principal de la app y modales
+├── vite.config.js          # Configuración de compilación Vite y PWA
+├── firestore.rules         # Reglas de seguridad multitenant y validaciones estrictas
 ├── src/
-│   ├── style.css       # Estilos, temas claro/oscuro y diseño responsivo
-│   └── main.js         # Lógica de la aplicación (Web Speech API, autosave, carpetas, papelera)
+│   ├── main.js             # Punto de entrada y orquestador principal
+│   ├── auth.js             # Gestión de autenticación, sesiones y perfil
+│   ├── firebase.js         # Inicialización SDK, detección segura de dominios y errores
+│   ├── notes.js            # Lógica de notas, dictado, persistencia y filtros
+│   ├── folders.js          # Gestión y sincronización de carpetas y departamentos
+│   ├── trash.js            # Papelera recuperable (soft-delete y purga definitiva)
+│   ├── print.js            # Modal de membrete oficial, equipo e impresión formal
+│   ├── speech.js           # Reconocimiento de voz y síntesis auditiva
+│   ├── state.js            # Estado global reactivo y helpers
+│   ├── constants.js        # Constantes, plantillas institucionales y defaults
+│   ├── dom.js              # Mapeo de elementos del DOM
+│   └── style.css           # Estilos editorial Tailwind CSS, temas claro/oscuro
 ├── public/
-│   ├── manifest.json   # Manifiesto PWA para instalación en móviles y PC
-│   ├── sw.js           # Service Worker v2.0 con caché inteligente offline
-│   ├── icon-192.png    # Icono de la app (192x192)
-│   └── icon-512.png    # Icono de la app (512x512)
-├── package.json        # Configuración del proyecto y versión 2.0.0
-└── README.md           # Documentación técnica del proyecto
+│   ├── manifest.json       # Manifiesto PWA para instalación
+│   ├── sw.js               # Service Worker offline
+│   ├── icon-192.png        # Icono de la app (192x192)
+│   └── icon-512.png        # Icono de la app (512x512)
+└── package.json            # Metadatos del proyecto y dependencias
 ```
 
 ---
 
-## 🚀 Cómo Ejecutar el Proyecto
+## 🚀 Instalación y Despliegue
 
 ### 1. Clonar el repositorio
 ```bash
@@ -51,38 +77,28 @@ cd BITACORA-HABLADA-2.0
 npm install
 ```
 
-### 3. Iniciar el servidor de desarrollo
+### 3. Iniciar el entorno de desarrollo
 ```bash
 npm run dev
 ```
-
-Abre tu navegador en `http://localhost:3000` (o el puerto que indique Vite).
+Abre en tu navegador `http://localhost:3000`.
 
 ### 4. Compilar para Producción
 ```bash
 npm run build
 ```
-Los archivos optimizados se generarán en la carpeta `dist/` con rutas relativas, listos para desplegar en GitHub Pages, Vercel, Netlify o cualquier servidor web estático.
+Los archivos optimizados se generarán en la carpeta `dist/`, listos para producción o despliegue en Google Cloud Run, Firebase Hosting, Vercel o Netlify.
 
 ---
 
-## 🌐 Despliegue en GitHub Pages
+## 🔒 Privacidad y Control de Acceso
 
-Gracias a las rutas relativas (`./`) configuradas en `index.html`, `vite.config.js` y `public/manifest.json`, la app es 100% compatible con subdirectorios de GitHub Pages:
-
-1. En tu repositorio de GitHub, ve a **Settings** > **Pages**.
-2. En **Build and deployment**, selecciona la rama donde publicas (o la carpeta `dist` / GitHub Actions).
-3. Tu app funcionará en `https://yeremy-b.github.io/BITACORA-HABLADA-2.0/` sin problemas de rutas 404.
-
----
-
-## 🔒 Privacidad y Almacenamiento
-
-- **Almacenamiento Local**: Todas tus carpetas y notas se guardan de forma privada y local en tu propio navegador mediante `window.localStorage`. No se transfieren a servidores externos.
-- **Reconocimiento y Síntesis de Voz**: Utiliza las APIs nativas del navegador (`SpeechRecognition` y `SpeechSynthesis`). Ten en cuenta que la disponibilidad del dictado depende del soporte de tu navegador y dispositivo.
+- **Aislamiento Multitenant**: Las notas personales se encuentran restringidas estrictamente al usuario creador (`/users/{uid}/notes`). Los reportes institucionales (`/reports`) solo son legibles y editables por miembros con el mismo dominio de correo verificado (`@institucion.gob.cl`).
+- **Seguridad en Reglas de Firestore**: Se aplican restricciones en el tamaño de cadenas de texto, validación de tipos, listas de tags y verificación de identidad en cada llamada de lectura y escritura.
 
 ---
 
 ## 📄 Licencia
 
 Este proyecto es de código abierto bajo la licencia [MIT](LICENSE).
+
