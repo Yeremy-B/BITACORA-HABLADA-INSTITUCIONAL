@@ -159,3 +159,43 @@ export async function logoutUser() {
     throw error;
   }
 }
+
+/**
+ * Standard Firestore Error Handler
+ */
+export function handleFirestoreError(error, operationType, path) {
+  const errInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid || null,
+      email: auth.currentUser?.email || null,
+      emailVerified: auth.currentUser?.emailVerified || null,
+      isAnonymous: auth.currentUser?.isAnonymous || null,
+      providerInfo: auth.currentUser?.providerData?.map(p => ({
+        providerId: p.providerId,
+        email: p.email
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error:', JSON.stringify(errInfo));
+  return errInfo;
+}
+
+export { 
+  onAuthStateChanged,
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  deleteDoc, 
+  updateDoc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
+  serverTimestamp 
+};
+

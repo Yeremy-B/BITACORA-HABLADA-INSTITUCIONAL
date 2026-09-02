@@ -1,53 +1,81 @@
 {
   "entities": {
     "UserProfile": {
-      "collection": "users",
-      "fields": {
-        "email": { "type": "string" },
-        "displayName": { "type": "string" },
-        "photoURL": { "type": "string" },
-        "accountType": { "type": "string" },
-        "organizationDomain": { "type": "string" },
-        "role": { "type": "string" },
-        "createdAt": { "type": "timestamp" },
-        "lastLogin": { "type": "timestamp" }
-      }
+      "title": "User Profile",
+      "description": "User account profile and organization membership metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "accountType": { "type": "string", "enum": ["personal", "institutional"] },
+        "orgDomain": { "type": "string", "maxLength": 128 },
+        "orgName": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "accountType", "orgDomain"]
     },
     "PersonalNote": {
-      "collection": "users/{userId}/notes",
-      "fields": {
-        "title": { "type": "string" },
-        "text": { "type": "string" },
-        "folder": { "type": "string" },
-        "tags": { "type": "array" },
-        "createdAt": { "type": "timestamp" },
-        "updatedAt": { "type": "timestamp" },
+      "title": "Personal Note",
+      "description": "Private note or voice log belonging exclusively to a single user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "text": { "type": "string", "maxLength": 100000 },
+        "folder": { "type": "string", "maxLength": 64 },
+        "tags": { "type": "array", "description": "Array of tag strings" },
+        "workspace": { "type": "string", "enum": ["personal", "enterprise"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
         "isTrash": { "type": "boolean" },
-        "workspace": { "type": "string" }
-      }
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "text", "folder", "workspace"]
     },
     "InstitutionalReport": {
-      "collection": "reports",
-      "fields": {
-        "title": { "type": "string" },
-        "text": { "type": "string" },
-        "folder": { "type": "string" },
-        "tags": { "type": "array" },
-        "docType": { "type": "string" },
-        "folio": { "type": "string" },
-        "assignee": { "type": "string" },
-        "dueDate": { "type": "string" },
-        "priority": { "type": "string" },
-        "status": { "type": "string" },
-        "attendees": { "type": "string" },
-        "authorUid": { "type": "string" },
-        "authorEmail": { "type": "string" },
-        "authorName": { "type": "string" },
-        "orgDomain": { "type": "string" },
-        "createdAt": { "type": "timestamp" },
-        "updatedAt": { "type": "timestamp" },
-        "isTrash": { "type": "boolean" }
-      }
+      "title": "Institutional Report",
+      "description": "Shared organizational log or document partitioned by enterprise domain",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "text": { "type": "string", "maxLength": 100000 },
+        "folder": { "type": "string", "maxLength": 64 },
+        "tags": { "type": "array", "description": "Array of tag strings" },
+        "docType": { "type": "string", "maxLength": 64 },
+        "folio": { "type": "string", "maxLength": 64 },
+        "assignee": { "type": "string", "maxLength": 128 },
+        "dueDate": { "type": "string", "maxLength": 64 },
+        "priority": { "type": "string", "enum": ["baja", "media", "alta", "urgente"] },
+        "status": { "type": "string", "enum": ["borrador", "en-proceso", "finalizado", "revisado"] },
+        "attendees": { "type": "string", "maxLength": 512 },
+        "authorUid": { "type": "string", "maxLength": 128 },
+        "authorEmail": { "type": "string", "maxLength": 256 },
+        "authorName": { "type": "string", "maxLength": 128 },
+        "orgDomain": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "isTrash": { "type": "boolean" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "text", "folder", "authorUid", "authorEmail", "orgDomain"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores user profiles with domain categorization"
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/PersonalNote" },
+      "description": "Stores private user-owned notes and drafts"
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/InstitutionalReport" },
+      "description": "Stores institutional workspace reports isolated by orgDomain"
     }
   }
 }

@@ -2,6 +2,24 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ========================================================================
+    // 1. GLOBAL SAFETY NET (DEFAULT DENY)
+    // ========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ========================================================================
+    // 2. REUSABLE PRIMITIVES & IDENTITY HELPERS
+    // ========================================================================
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -10,23 +28,113 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // User profile documents
-    match /users/{userId} {
-      allow read, write: if isOwner(userId);
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
 
-      // User's private notes and preferences
+    function getUserDomain() {
+      return (isSignedIn() && request.auth.token.email != null && request.auth.token.email.split('@').size() == 2)
+        ? request.auth.token.email.split('@')[1]
+        : '';
+    }
+
+    function isOrgMember(orgDomain) {
+      return isSignedIn() && 
+             orgDomain is string && 
+             orgDomain.size() > 0 &&
+             orgDomain.size() <= 128 &&
+             getUserDomain() == orgDomain;
+    }
+
+    // ========================================================================
+    // 3. ENTITY VALIDATION HELPERS (ANTI-UPDATE-GAP)
+    // ========================================================================
+    function isValidUserProfile(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             data.accountType in ['personal', 'institutional'] &&
+             data.orgDomain is string && data.orgDomain.size() <= 128 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024)) &&
+             (!('orgName' in data) || (data.orgName is string && data.orgName.size() <= 128));
+    }
+
+    function isValidPersonalNote(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 256 &&
+             data.text is string && data.text.size() <= 100000 &&
+             data.folder is string && data.folder.size() <= 64 &&
+             (!('workspace' in data) || data.workspace in ['personal', 'enterprise']) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('isTrash' in data) || data.isTrash is bool);
+    }
+
+    function isValidInstitutionalReport(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 256 &&
+             data.text is string && data.text.size() <= 100000 &&
+             data.folder is string && data.folder.size() <= 64 &&
+             data.authorUid is string && data.authorUid == request.auth.uid &&
+             data.authorEmail is string && data.authorEmail.size() <= 256 &&
+             data.orgDomain is string && data.orgDomain == getUserDomain() &&
+             (!('docType' in data) || (data.docType is string && data.docType.size() <= 64)) &&
+             (!('folio' in data) || (data.folio is string && data.folio.size() <= 64)) &&
+             (!('assignee' in data) || (data.assignee is string && data.assignee.size() <= 128)) &&
+             (!('dueDate' in data) || (data.dueDate is string && data.dueDate.size() <= 64)) &&
+             (!('priority' in data) || data.priority in ['baja', 'media', 'alta', 'urgente']) &&
+             (!('status' in data) || data.status in ['borrador', 'en-proceso', 'finalizado', 'revisado']) &&
+             (!('attendees' in data) || (data.attendees is string && data.attendees.size() <= 512)) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('isTrash' in data) || data.isTrash is bool);
+    }
+
+    // ========================================================================
+    // 4. USER PROFILE & PRIVATE NOTES
+    // ========================================================================
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow delete: if false;
+
+      // User's private subcollections (Personal Notes)
       match /notes/{noteId} {
-        allow read, write: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(noteId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(noteId) && isValidPersonalNote(incoming());
+        allow update: if isOwner(userId) && isValidId(noteId) && isValidPersonalNote(incoming());
+        allow delete: if isOwner(userId) && isValidId(noteId);
       }
 
       match /config/{configId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) && isValidId(configId);
       }
     }
 
-    // Institutional / Shared organizational reports
+    // ========================================================================
+    // 5. INSTITUTIONAL / MULTI-TENANT SHARED REPORTS
+    // ========================================================================
     match /reports/{reportId} {
-      allow read, write: if isSignedIn();
+      // Query Enforcer & Single Doc Read
+      allow get: if isOrgMember(resource.data.orgDomain) && isValidId(reportId);
+      allow list: if isSignedIn() && resource.data.orgDomain == getUserDomain();
+
+      // Creation: must belong to the user's organization and match authorUid
+      allow create: if isValidId(reportId) &&
+                      isOrgMember(incoming().orgDomain) &&
+                      isValidInstitutionalReport(incoming());
+
+      // Update: user must belong to the organization, cannot tamper authorUid or orgDomain
+      allow update: if isValidId(reportId) &&
+                      isOrgMember(existing().orgDomain) &&
+                      incoming().orgDomain == existing().orgDomain &&
+                      incoming().authorUid == existing().authorUid &&
+                      isValidInstitutionalReport(incoming());
+
+      // Deletion: only the author or members of the same organization
+      allow delete: if isValidId(reportId) &&
+                      isOrgMember(existing().orgDomain) &&
+                      (existing().authorUid == request.auth.uid);
     }
   }
 }
