@@ -1,11 +1,30 @@
 import { state, setStatus, uid } from './state.js';
 import { DEFAULT_LETTERHEAD, DEFAULT_TEAM_MEMBERS, WORKSPACES } from './constants.js';
 import { el } from './dom.js';
+import { db, doc, getDoc, setDoc, analyzeEmailDomain, handleFirestoreError } from './firebase.js';
 
 // ==========================================================================
-// CONFIGURACIÓN DE MEMBRETE & EQUIPO
+// CONFIGURACIÓN DE MEMBRETE & EQUIPO (LOCAL + FIRESTORE COMPARTIDO)
 // ==========================================================================
-export function loadLetterheadConfig() {
+export async function loadLetterheadConfig() {
+  const isEnterprise = state.workspace === WORKSPACES.ENTERPRISE;
+  
+  if (isEnterprise && db && state.currentUser && state.currentUser.uid) {
+    const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
+    if (orgDomain) {
+      try {
+        const snap = await getDoc(doc(db, 'orgs', orgDomain, 'config', 'letterhead'));
+        if (snap.exists()) {
+          state.letterhead = { ...DEFAULT_LETTERHEAD, ...snap.data() };
+          localStorage.setItem('letterhead_config', JSON.stringify(state.letterhead));
+          return;
+        }
+      } catch (e) {
+        handleFirestoreError(e, 'get_letterhead', `orgs/${orgDomain}/config/letterhead`);
+      }
+    }
+  }
+
   try {
     const raw = localStorage.getItem('letterhead_config');
     state.letterhead = raw ? { ...DEFAULT_LETTERHEAD, ...JSON.parse(raw) } : { ...DEFAULT_LETTERHEAD };
@@ -14,11 +33,46 @@ export function loadLetterheadConfig() {
   }
 }
 
-export function saveLetterheadConfig() {
+export async function saveLetterheadConfig() {
   localStorage.setItem('letterhead_config', JSON.stringify(state.letterhead));
+
+  const isEnterprise = state.workspace === WORKSPACES.ENTERPRISE;
+  if (isEnterprise && db && state.currentUser && state.currentUser.uid) {
+    const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
+    if (orgDomain) {
+      try {
+        await setDoc(doc(db, 'orgs', orgDomain, 'config', 'letterhead'), {
+          ...state.letterhead,
+          updatedAt: Date.now(),
+          updatedBy: state.currentUser.email
+        }, { merge: true });
+      } catch (e) {
+        handleFirestoreError(e, 'set_letterhead', `orgs/${orgDomain}/config/letterhead`);
+      }
+    }
+  }
 }
 
-export function loadTeamMembers() {
+export async function loadTeamMembers() {
+  const isEnterprise = state.workspace === WORKSPACES.ENTERPRISE;
+
+  if (isEnterprise && db && state.currentUser && state.currentUser.uid) {
+    const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
+    if (orgDomain) {
+      try {
+        const snap = await getDoc(doc(db, 'orgs', orgDomain, 'config', 'team'));
+        if (snap.exists() && snap.data().members) {
+          state.teamMembers = snap.data().members;
+          localStorage.setItem('team_members', JSON.stringify(state.teamMembers));
+          updateTeamAssigneeOptions();
+          return;
+        }
+      } catch (e) {
+        handleFirestoreError(e, 'get_team', `orgs/${orgDomain}/config/team`);
+      }
+    }
+  }
+
   try {
     const raw = localStorage.getItem('team_members');
     state.teamMembers = raw ? JSON.parse(raw) : [...DEFAULT_TEAM_MEMBERS];
@@ -28,10 +82,26 @@ export function loadTeamMembers() {
   updateTeamAssigneeOptions();
 }
 
-export function saveTeamMembers() {
+export async function saveTeamMembers() {
   localStorage.setItem('team_members', JSON.stringify(state.teamMembers));
   updateTeamAssigneeOptions();
   renderTeamMembersList();
+
+  const isEnterprise = state.workspace === WORKSPACES.ENTERPRISE;
+  if (isEnterprise && db && state.currentUser && state.currentUser.uid) {
+    const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
+    if (orgDomain) {
+      try {
+        await setDoc(doc(db, 'orgs', orgDomain, 'config', 'team'), {
+          members: state.teamMembers,
+          updatedAt: Date.now(),
+          updatedBy: state.currentUser.email
+        }, { merge: true });
+      } catch (e) {
+        handleFirestoreError(e, 'set_team', `orgs/${orgDomain}/config/team`);
+      }
+    }
+  }
 }
 
 export function updateTeamAssigneeOptions() {

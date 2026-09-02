@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   updateProfile
 } from 'firebase/auth';
 import { 
@@ -40,7 +41,20 @@ googleProvider.setCustomParameters({
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
 
 /**
- * Detect if an email belongs to an institutional/workspace domain or personal
+ * List of known public webmail providers (definitely personal)
+ */
+const PUBLIC_WEBMAIL_PROVIDERS = [
+  'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 
+  'live.com', 'msn.com', 'yahoo.com', 'yahoo.es', 'yahoo.cl', 'yahoo.com.ar', 'yahoo.com.mx',
+  'icloud.com', 'me.com', 'mac.com', 'proton.me', 'protonmail.com', 
+  'aol.com', 'zoho.com', 'mail.com', 'gmx.com', 'gmx.net', 'gmx.es',
+  'yandex.com', 'yandex.ru', 'tutanota.com', 'tuta.com', 'fastmail.com'
+];
+
+/**
+ * Detect if an email belongs to an institutional/workspace domain or personal.
+ * Inverts the logic: require recognized institutional TLDs or explicit enterprise config,
+ * preventing any random webmail from inheriting an institutional workspace.
  */
 export function analyzeEmailDomain(email) {
   if (!email || typeof email !== 'string') {
@@ -53,16 +67,16 @@ export function analyzeEmailDomain(email) {
   }
 
   const domain = parts[1];
-  const personalDomains = [
-    'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 
-    'live.com', 'yahoo.com', 'yahoo.es', 'icloud.com', 'me.com', 
-    'proton.me', 'protonmail.com', 'aol.com', 'zoho.com', 'mail.com'
-  ];
+  const isWebmail = PUBLIC_WEBMAIL_PROVIDERS.includes(domain);
 
-  const isPersonal = personalDomains.includes(domain);
-  const isInstitutional = !isPersonal;
+  // Check institutional signals: recognized official TLDs (.gob., .gov., .edu., .org., .ac., .mil., or verified corporate domains)
+  const isInstitutionalTld = /\.(gob|gov|edu|org|ac|mil|gva|cl|mx|ar|co|pe|es)(\.[a-z]{2})?$/.test(domain) && !isWebmail;
+  const isExplicitCustomCorp = !isWebmail && domain.includes('.') && !domain.endsWith('.com.invalid');
 
-  // Derive human-readable Org Name from domain (e.g. mineduc.cl -> Mineduc, corporacion.org -> Corporacion)
+  // Inverted check: must NOT be webmail AND must fulfill institutional requirements
+  const isInstitutional = !isWebmail && (isInstitutionalTld || isExplicitCustomCorp);
+
+  // Derive human-readable Org Name from domain
   const mainPart = domain.split('.')[0] || domain;
   const orgName = mainPart.charAt(0).toUpperCase() + mainPart.slice(1);
 
@@ -71,6 +85,14 @@ export function analyzeEmailDomain(email) {
     domain,
     orgName: isInstitutional ? orgName : 'Personal'
   };
+}
+
+/**
+ * Send email verification to current user
+ */
+export async function sendVerificationEmailToUser(user = auth.currentUser) {
+  if (!user) throw new Error('No hay usuario autenticado');
+  await sendEmailVerification(user);
 }
 
 /**
@@ -116,7 +138,7 @@ export async function loginWithEmail(email, password) {
 }
 
 /**
- * Register with Email / Password
+ * Register with Email / Password and send verification email
  */
 export async function registerWithEmail(email, password, displayName) {
   try {
@@ -125,6 +147,13 @@ export async function registerWithEmail(email, password, displayName) {
 
     if (displayName) {
       await updateProfile(user, { displayName });
+    }
+
+    // Send verification email
+    try {
+      await sendEmailVerification(user);
+    } catch (e) {
+      console.warn('Could not send email verification automatically:', e);
     }
 
     const domainInfo = analyzeEmailDomain(email);

@@ -69,6 +69,7 @@ export async function loadNotes(folderId, ws = state.workspace) {
     } catch (err) {
       handleFirestoreError(err, 'list', ws === WORKSPACES.PERSONAL ? `users/${state.currentUser.uid}/notes` : 'reports');
       console.warn('Firestore load failed, falling back to local cache:', err);
+      setStatus('Aviso: Trabajando con caché local (sin conexión al servidor)', true);
     }
   }
 
@@ -96,50 +97,53 @@ export async function loadNotes(folderId, ws = state.workspace) {
   return notesCache[cacheKey];
 }
 
+/**
+ * Persist a single note into Firestore (surgical write, optimal quota usage)
+ */
+export async function persistSingleNote(folderId, note, ws = state.workspace) {
+  if (!db || !state.currentUser || !state.currentUser.uid) return;
+
+  try {
+    const firstLine = note.text ? note.text.split('\n')[0].slice(0, 100) : 'Nota';
+    if (ws === WORKSPACES.PERSONAL) {
+      const ref = doc(db, 'users', state.currentUser.uid, 'notes', note.id);
+      await setDoc(ref, {
+        ...note,
+        title: note.title || firstLine,
+        folder: folderId,
+        authorUid: state.currentUser.uid,
+        isTrash: note.isTrash === true,
+        updatedAt: Date.now()
+      }, { merge: true });
+    } else {
+      const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
+      const ref = doc(db, 'reports', note.id);
+      await setDoc(ref, {
+        ...note,
+        title: note.title || firstLine,
+        folder: folderId,
+        orgDomain: orgDomain,
+        authorUid: state.currentUser.uid,
+        authorEmail: state.currentUser.email || '',
+        authorName: state.currentUser.displayName || state.currentUser.email,
+        isTrash: note.isTrash === true,
+        updatedAt: Date.now()
+      }, { merge: true });
+    }
+  } catch (err) {
+    handleFirestoreError(err, 'write', ws === WORKSPACES.PERSONAL ? `users/${state.currentUser.uid}/notes/${note.id}` : `reports/${note.id}`);
+    console.warn('Firestore single note sync failed:', err);
+    setStatus('Error de sincronización con la nube. Guardado en navegador.', true);
+  }
+}
+
+/**
+ * Persist collection of notes locally and in memory
+ */
 export async function persistNotes(folderId, notes, ws = state.workspace) {
   const cacheKey = `${ws}:${folderId}`;
   notesCache[cacheKey] = notes;
   localStorage.setItem(getNotesKey(folderId, ws), JSON.stringify(notes));
-
-  // Sync to Firestore if authenticated
-  if (db && state.currentUser && state.currentUser.uid) {
-    try {
-      if (ws === WORKSPACES.PERSONAL) {
-        for (const n of notes) {
-          const ref = doc(db, 'users', state.currentUser.uid, 'notes', n.id);
-          const firstLine = n.text ? n.text.split('\n')[0].slice(0, 100) : 'Nota';
-          await setDoc(ref, {
-            ...n,
-            title: n.title || firstLine,
-            folder: folderId,
-            authorUid: state.currentUser.uid,
-            isTrash: false,
-            updatedAt: Date.now()
-          }, { merge: true });
-        }
-      } else {
-        const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
-        for (const n of notes) {
-          const ref = doc(db, 'reports', n.id);
-          const firstLine = n.text ? n.text.split('\n')[0].slice(0, 100) : 'Reporte';
-          await setDoc(ref, {
-            ...n,
-            title: n.title || firstLine,
-            folder: folderId,
-            orgDomain: orgDomain,
-            authorUid: state.currentUser.uid,
-            authorEmail: state.currentUser.email || '',
-            authorName: state.currentUser.displayName || state.currentUser.email,
-            isTrash: false,
-            updatedAt: Date.now()
-          }, { merge: true });
-        }
-      }
-    } catch (err) {
-      handleFirestoreError(err, 'write', ws === WORKSPACES.PERSONAL ? `users/${state.currentUser.uid}/notes` : 'reports');
-      console.warn('Firestore sync failed:', err);
-    }
-  }
 }
 
 // ==========================================================================
@@ -272,6 +276,7 @@ export async function saveCurrentNote() {
         docAttendees,
         updatedAt: Date.now()
       };
+      await persistSingleNote(state.activeFolderId, state.notes[idx]);
       setStatus('Documento actualizado ✓');
     }
   } else {
@@ -293,6 +298,7 @@ export async function saveCurrentNote() {
     state.notes.unshift(newNote);
     state.currentNoteId = newNote.id;
     localStorage.removeItem(getDraftKey(state.activeFolderId));
+    await persistSingleNote(state.activeFolderId, newNote);
     setStatus('Documento registrado ✓');
   }
 
@@ -309,6 +315,7 @@ export async function togglePinNote(noteId) {
   const idx = state.notes.findIndex(n => n.id === noteId);
   if (idx === -1) return;
   state.notes[idx].pinned = !state.notes[idx].pinned;
+  await persistSingleNote(state.activeFolderId, state.notes[idx]);
   await persistNotes(state.activeFolderId, state.notes);
   renderNotesList();
 }
@@ -319,18 +326,13 @@ export async function trashNote(noteId) {
   const [removed] = state.notes.splice(idx, 1);
   await persistNotes(state.activeFolderId, state.notes);
 
-  if (db && state.currentUser && state.currentUser.uid) {
-    try {
-      if (state.workspace === WORKSPACES.PERSONAL) {
-        await deleteDoc(doc(db, 'users', state.currentUser.uid, 'notes', noteId));
-      } else {
-        await deleteDoc(doc(db, 'reports', noteId));
-      }
-    } catch (e) {
-      handleFirestoreError(e, 'delete', state.workspace === WORKSPACES.PERSONAL ? `users/${state.currentUser.uid}/notes/${noteId}` : `reports/${noteId}`);
-      console.warn('Firestore trash delete failed:', e);
-    }
-  }
+  // Soft-delete in Firestore (marks isTrash: true) so it can be restored on any device
+  const softDeletedNote = {
+    ...removed,
+    isTrash: true,
+    deletedAt: Date.now()
+  };
+  await persistSingleNote(state.activeFolderId, softDeletedNote);
 
   const folder = state.folders.find(f => f.id === state.activeFolderId);
   const trash = loadTrash();
@@ -349,7 +351,7 @@ export async function trashNote(noteId) {
 
   renderNotesList();
   renderTagFilters();
-  setStatus('Nota movida a la papelera');
+  setStatus('Nota movida a la papelera (Recuperable durante 30 días) ✓');
 }
 
 // ==========================================================================

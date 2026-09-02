@@ -1,15 +1,36 @@
 import { state, uid, getFoldersKey, getActiveFolderKey, setStatus, askConfirm } from './state.js';
 import { WORKSPACES, DEFAULT_PERSONAL_FOLDERS, DEFAULT_ENTERPRISE_FOLDERS } from './constants.js';
 import { el } from './dom.js';
+import { db, doc, getDoc, setDoc, analyzeEmailDomain, handleFirestoreError } from './firebase.js';
+import { loadNotes, persistSingleNote, persistNotes } from './notes.js';
 
 export async function loadFolders(callbacks = {}) {
+  const isEnterprise = state.workspace === WORKSPACES.ENTERPRISE;
   const key = getFoldersKey();
   let folders = [];
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) folders = JSON.parse(raw);
-  } catch (e) {
-    console.warn('Error reading folders from localStorage:', e);
+
+  // Try Firestore for institutional folders if logged in
+  if (isEnterprise && db && state.currentUser && state.currentUser.uid) {
+    const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
+    if (orgDomain) {
+      try {
+        const orgDoc = await getDoc(doc(db, 'orgs', orgDomain, 'config', 'folders'));
+        if (orgDoc.exists() && orgDoc.data().list && orgDoc.data().list.length > 0) {
+          folders = orgDoc.data().list;
+        }
+      } catch (e) {
+        handleFirestoreError(e, 'get_org_folders', `orgs/${orgDomain}/config/folders`);
+      }
+    }
+  }
+
+  if (!folders || folders.length === 0) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) folders = JSON.parse(raw);
+    } catch (e) {
+      console.warn('Error reading folders from localStorage:', e);
+    }
   }
 
   // Backward compatibility
@@ -41,8 +62,25 @@ export async function loadFolders(callbacks = {}) {
 }
 
 export async function persistFolders(folders = state.folders) {
+  const isEnterprise = state.workspace === WORKSPACES.ENTERPRISE;
   const key = getFoldersKey();
   localStorage.setItem(key, JSON.stringify(folders));
+
+  // Sync to shared organizational Firestore if in enterprise mode
+  if (isEnterprise && db && state.currentUser && state.currentUser.uid) {
+    const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
+    if (orgDomain) {
+      try {
+        await setDoc(doc(db, 'orgs', orgDomain, 'config', 'folders'), {
+          list: folders,
+          updatedAt: Date.now(),
+          updatedBy: state.currentUser.email
+        }, { merge: true });
+      } catch (e) {
+        handleFirestoreError(e, 'set_org_folders', `orgs/${orgDomain}/config/folders`);
+      }
+    }
+  }
 }
 
 export function updateWorkspaceUI() {
@@ -201,11 +239,33 @@ export async function selectFolder(folderId, callbacks = {}) {
 export async function deleteFolder(folderId, callbacks = {}) {
   const idx = state.folders.findIndex(f => f.id === folderId);
   if (idx === -1) return;
+
+  const deletedFolder = state.folders[idx];
   state.folders.splice(idx, 1);
   await persistFolders();
 
+  const targetFolder = state.folders[0];
+
+  // Safely migrate all notes from the deleted folder to the default primary folder
+  try {
+    const orphanNotes = await loadNotes(folderId);
+    if (orphanNotes && orphanNotes.length > 0) {
+      const targetNotes = await loadNotes(targetFolder.id);
+      for (const n of orphanNotes) {
+        n.folder = targetFolder.id;
+        await persistSingleNote(targetFolder.id, n);
+        targetNotes.unshift(n);
+      }
+      await persistNotes(targetFolder.id, targetNotes);
+      // Clean up old local storage key
+      localStorage.removeItem(`notes_${state.workspace}:${folderId}`);
+    }
+  } catch (e) {
+    console.warn('Error migrating notes during folder deletion:', e);
+  }
+
   if (state.activeFolderId === folderId) {
-    state.activeFolderId = state.folders[0].id;
+    state.activeFolderId = targetFolder.id;
     localStorage.setItem(getActiveFolderKey(), state.activeFolderId);
   }
 
@@ -214,7 +274,7 @@ export async function deleteFolder(folderId, callbacks = {}) {
     await callbacks.onFolderSelect(state.activeFolderId);
   }
   const term = state.workspace === WORKSPACES.ENTERPRISE ? 'Departamento' : 'Carpeta';
-  setStatus(`${term} eliminada`);
+  setStatus(`${term} "${deletedFolder.name}" eliminado. Sus documentos fueron reasignados a "${targetFolder.name}". ✓`);
 }
 
 export async function createNewFolder(name, callbacks = {}) {

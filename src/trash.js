@@ -1,6 +1,7 @@
 import { state, getTrashKey, setStatus, askConfirm } from './state.js';
 import { WORKSPACES } from './constants.js';
 import { el } from './dom.js';
+import { db, doc, deleteDoc, handleFirestoreError } from './firebase.js';
 
 export function loadTrash() {
   try {
@@ -93,12 +94,27 @@ export async function restoreTrashItem(index, callbacks = {}) {
   setStatus('Documento restaurado ✓');
 }
 
-export function deleteTrashItemPermanently(index) {
+export async function deleteTrashItemPermanently(index) {
   const trash = loadTrash();
-  trash.splice(index, 1);
+  const [item] = trash.splice(index, 1);
   saveTrash(trash);
+
+  // Hard delete from Firestore only when permanently removed from trash
+  if (db && item && item.id && state.currentUser && state.currentUser.uid) {
+    try {
+      if (state.workspace === WORKSPACES.PERSONAL) {
+        await deleteDoc(doc(db, 'users', state.currentUser.uid, 'notes', item.id));
+      } else {
+        await deleteDoc(doc(db, 'reports', item.id));
+      }
+    } catch (e) {
+      handleFirestoreError(e, 'hard_delete', state.workspace === WORKSPACES.PERSONAL ? `users/${state.currentUser.uid}/notes/${item.id}` : `reports/${item.id}`);
+      console.warn('Firestore permanent delete error:', e);
+    }
+  }
+
   renderTrashList();
-  setStatus('Documento eliminado definitivamente');
+  setStatus('Documento eliminado definitivamente de la nube y almacenamiento local');
 }
 
 export function initTrashListeners(callbacks = {}) {
@@ -119,11 +135,28 @@ export function initTrashListeners(callbacks = {}) {
 
   if (el.emptyTrashBtn) {
     el.emptyTrashBtn.addEventListener('click', async () => {
-      const ok = await askConfirm('¿Vaciar papelera?', 'Se eliminarán permanentemente todas las notas de la papelera.');
+      const ok = await askConfirm('¿Vaciar papelera permanentemente?', 'Se eliminarán de forma definitiva todas las notas de la papelera en este dispositivo y en la nube.');
       if (!ok) return;
+
+      const trash = loadTrash();
+      // Permanently remove all items from Firestore
+      if (db && state.currentUser && state.currentUser.uid) {
+        for (const item of trash) {
+          try {
+            if (state.workspace === WORKSPACES.PERSONAL) {
+              await deleteDoc(doc(db, 'users', state.currentUser.uid, 'notes', item.id));
+            } else {
+              await deleteDoc(doc(db, 'reports', item.id));
+            }
+          } catch (e) {
+            console.warn('Error purging item from Firestore:', e);
+          }
+        }
+      }
+
       saveTrash([]);
       renderTrashList(callbacks);
-      setStatus('Papelera vaciada');
+      setStatus('Papelera vaciada permanentemente ✓');
     });
   }
 }

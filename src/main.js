@@ -248,7 +248,9 @@ async function initApp() {
       const notes = await loadNotes(targetFolder.id);
       delete restoredItem.deletedAt;
       delete restoredItem.folderName;
+      restoredItem.isTrash = false;
       notes.unshift(restoredItem);
+      await persistSingleNote(targetFolder.id, restoredItem);
       await persistNotes(targetFolder.id, notes);
       if (targetFolder.id === state.activeFolderId) {
         state.notes = notes;

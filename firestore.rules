@@ -43,7 +43,8 @@ service cloud.firestore {
              orgDomain is string && 
              orgDomain.size() > 0 &&
              orgDomain.size() <= 128 &&
-             getUserDomain() == orgDomain;
+             getUserDomain() == orgDomain &&
+             (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
     }
 
     // ========================================================================
@@ -143,6 +144,18 @@ service cloud.firestore {
       allow delete: if isValidId(reportId) &&
                       isOrgMember(existing().orgDomain) &&
                       (existing().authorUid == request.auth.uid);
+    }
+
+    // ========================================================================
+    // 6. SHARED ORGANIZATIONAL CONFIGURATION & FOLDERS
+    // ========================================================================
+    match /orgs/{orgDomain} {
+      allow get: if isOrgMember(orgDomain) && isValidId(orgDomain);
+      allow write: if isOrgMember(orgDomain) && isValidId(orgDomain);
+
+      match /config/{configDoc} {
+        allow read, write: if isOrgMember(orgDomain) && isValidId(configDoc);
+      }
     }
   }
 }

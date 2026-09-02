@@ -112,6 +112,9 @@ export function setupAuthHandlers(callbacks = {}) {
         if (state.isRegisterMode) {
           const res = await registerWithEmail(email, pass, name);
           user = res.user;
+          if (domainInfo.isInstitutional) {
+            setStatus('Cuenta registrada. Hemos enviado un correo de verificación para activar el acceso institucional completo.', false);
+          }
         } else {
           user = await loginWithEmail(email, pass);
         }
