@@ -61,17 +61,18 @@ service cloud.firestore {
 
     function isValidPersonalNote(data) {
       return data.id is string && data.id.size() <= 128 &&
-             data.title is string && data.title.size() <= 256 &&
+             (!('title' in data) || (data.title is string && data.title.size() <= 256)) &&
              data.text is string && data.text.size() <= 100000 &&
              data.folder is string && data.folder.size() <= 64 &&
              (!('workspace' in data) || data.workspace in ['personal', 'enterprise']) &&
              (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('pinned' in data) || data.pinned is bool) &&
              (!('isTrash' in data) || data.isTrash is bool);
     }
 
     function isValidInstitutionalReport(data) {
       return data.id is string && data.id.size() <= 128 &&
-             data.title is string && data.title.size() <= 256 &&
+             (!('title' in data) || (data.title is string && data.title.size() <= 256)) &&
              data.text is string && data.text.size() <= 100000 &&
              data.folder is string && data.folder.size() <= 64 &&
              data.authorUid is string && data.authorUid == request.auth.uid &&
@@ -79,12 +80,19 @@ service cloud.firestore {
              data.orgDomain is string && data.orgDomain == getUserDomain() &&
              (!('docType' in data) || (data.docType is string && data.docType.size() <= 64)) &&
              (!('folio' in data) || (data.folio is string && data.folio.size() <= 64)) &&
+             (!('docFolio' in data) || (data.docFolio is string && data.docFolio.size() <= 64)) &&
              (!('assignee' in data) || (data.assignee is string && data.assignee.size() <= 128)) &&
+             (!('taskAssignee' in data) || (data.taskAssignee is string && data.taskAssignee.size() <= 128)) &&
              (!('dueDate' in data) || (data.dueDate is string && data.dueDate.size() <= 64)) &&
-             (!('priority' in data) || data.priority in ['baja', 'media', 'alta', 'urgente']) &&
-             (!('status' in data) || data.status in ['borrador', 'en-proceso', 'finalizado', 'revisado']) &&
+             (!('taskDueDate' in data) || (data.taskDueDate is string && data.taskDueDate.size() <= 64)) &&
+             (!('priority' in data) || data.priority in ['baja', 'media', 'alta', 'urgente', 'normal']) &&
+             (!('taskPriority' in data) || data.taskPriority in ['baja', 'media', 'alta', 'urgente', 'normal']) &&
+             (!('status' in data) || data.status in ['borrador', 'en-proceso', 'finalizado', 'revisado', 'pendiente']) &&
+             (!('taskStatus' in data) || data.taskStatus in ['borrador', 'en-proceso', 'finalizado', 'revisado', 'pendiente']) &&
              (!('attendees' in data) || (data.attendees is string && data.attendees.size() <= 512)) &&
+             (!('docAttendees' in data) || (data.docAttendees is string && data.docAttendees.size() <= 512)) &&
              (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('pinned' in data) || data.pinned is bool) &&
              (!('isTrash' in data) || data.isTrash is bool);
     }
 

@@ -9,7 +9,18 @@ import {
 } from './state.js';
 import { WORKSPACES, INSTITUTIONAL_TEMPLATES } from './constants.js';
 import { el } from './dom.js';
-import { db, collection, doc, setDoc, getDocs, query, where, analyzeEmailDomain } from './firebase.js';
+import { 
+  db, 
+  collection, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  getDocs, 
+  query, 
+  where, 
+  analyzeEmailDomain, 
+  handleFirestoreError 
+} from './firebase.js';
 import { loadTrash, saveTrash } from './trash.js';
 import { generateAutoFolio, openFormalPrintModal } from './print.js';
 import { speakText } from './speech.js';
@@ -49,16 +60,15 @@ export async function loadNotes(folderId, ws = state.workspace) {
         notes = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       }
 
-      if (notes.length > 0) {
-        notesCache[cacheKey] = notes;
-        localStorage.setItem(localKey, JSON.stringify(notes));
-        if (ws === state.workspace && folderId === state.activeFolderId) {
-          state.notes = notes;
-        }
-        return notes;
+      notesCache[cacheKey] = notes;
+      localStorage.setItem(localKey, JSON.stringify(notes));
+      if (ws === state.workspace && folderId === state.activeFolderId) {
+        state.notes = notes;
       }
+      return notes;
     } catch (err) {
-      console.warn('Firestore load failed, falling back to local:', err);
+      handleFirestoreError(err, 'list', ws === WORKSPACES.PERSONAL ? `users/${state.currentUser.uid}/notes` : 'reports');
+      console.warn('Firestore load failed, falling back to local cache:', err);
     }
   }
 
@@ -97,8 +107,10 @@ export async function persistNotes(folderId, notes, ws = state.workspace) {
       if (ws === WORKSPACES.PERSONAL) {
         for (const n of notes) {
           const ref = doc(db, 'users', state.currentUser.uid, 'notes', n.id);
+          const firstLine = n.text ? n.text.split('\n')[0].slice(0, 100) : 'Nota';
           await setDoc(ref, {
             ...n,
+            title: n.title || firstLine,
             folder: folderId,
             authorUid: state.currentUser.uid,
             isTrash: false,
@@ -109,11 +121,14 @@ export async function persistNotes(folderId, notes, ws = state.workspace) {
         const orgDomain = state.currentUser.orgDomain || analyzeEmailDomain(state.currentUser.email).domain;
         for (const n of notes) {
           const ref = doc(db, 'reports', n.id);
+          const firstLine = n.text ? n.text.split('\n')[0].slice(0, 100) : 'Reporte';
           await setDoc(ref, {
             ...n,
+            title: n.title || firstLine,
             folder: folderId,
             orgDomain: orgDomain,
             authorUid: state.currentUser.uid,
+            authorEmail: state.currentUser.email || '',
             authorName: state.currentUser.displayName || state.currentUser.email,
             isTrash: false,
             updatedAt: Date.now()
@@ -121,6 +136,7 @@ export async function persistNotes(folderId, notes, ws = state.workspace) {
         }
       }
     } catch (err) {
+      handleFirestoreError(err, 'write', ws === WORKSPACES.PERSONAL ? `users/${state.currentUser.uid}/notes` : 'reports');
       console.warn('Firestore sync failed:', err);
     }
   }
@@ -302,6 +318,19 @@ export async function trashNote(noteId) {
   if (idx === -1) return;
   const [removed] = state.notes.splice(idx, 1);
   await persistNotes(state.activeFolderId, state.notes);
+
+  if (db && state.currentUser && state.currentUser.uid) {
+    try {
+      if (state.workspace === WORKSPACES.PERSONAL) {
+        await deleteDoc(doc(db, 'users', state.currentUser.uid, 'notes', noteId));
+      } else {
+        await deleteDoc(doc(db, 'reports', noteId));
+      }
+    } catch (e) {
+      handleFirestoreError(e, 'delete', state.workspace === WORKSPACES.PERSONAL ? `users/${state.currentUser.uid}/notes/${noteId}` : `reports/${noteId}`);
+      console.warn('Firestore trash delete failed:', e);
+    }
+  }
 
   const folder = state.folders.find(f => f.id === state.activeFolderId);
   const trash = loadTrash();
