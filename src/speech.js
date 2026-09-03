@@ -115,11 +115,36 @@ export function speakText(textToRead) {
   }
   utter.rate = 1.0;
 
+  if (el.readingOverlay && el.readingText) {
+    el.readingText.innerHTML = '';
+    const words = text.split(/\s+/).filter(Boolean);
+    const wordSpans = words.map(w => {
+      const sp = document.createElement('span');
+      sp.className = 'rword';
+      sp.textContent = w + ' ';
+      el.readingText.appendChild(sp);
+      return sp;
+    });
+
+    let currentWordIdx = 0;
+    utter.onboundary = (event) => {
+      if (event.name === 'word') {
+        wordSpans.forEach(s => s.classList.remove('active'));
+        if (wordSpans[currentWordIdx]) {
+          wordSpans[currentWordIdx].classList.add('active');
+          wordSpans[currentWordIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        currentWordIdx++;
+      }
+    };
+  }
+
   utter.onstart = () => {
     state.speaking = true;
     if (el.playBtn) el.playBtn.disabled = true;
     if (el.stopBtn) el.stopBtn.disabled = false;
     if (el.waveform) el.waveform.classList.add('active');
+    if (el.readingOverlay) el.readingOverlay.classList.add('open');
     setStatus('🔊 Leyendo en voz alta...');
   };
 
@@ -140,6 +165,7 @@ export function stopSpeaking() {
   if (el.playBtn) el.playBtn.disabled = false;
   if (el.stopBtn) el.stopBtn.disabled = true;
   if (el.waveform) el.waveform.classList.remove('active');
+  if (el.readingOverlay) el.readingOverlay.classList.remove('open');
 }
 
 export function initSpeechSynthesis() {
@@ -152,6 +178,12 @@ export function initSpeechSynthesis() {
 
   if (el.playBtn) el.playBtn.addEventListener('click', () => speakText());
   if (el.stopBtn) el.stopBtn.addEventListener('click', stopSpeaking);
+  if (el.readingStopBtn) el.readingStopBtn.addEventListener('click', stopSpeaking);
+  if (el.readingOverlay) {
+    el.readingOverlay.addEventListener('click', (e) => {
+      if (e.target === el.readingOverlay) stopSpeaking();
+    });
+  }
   if (el.previewVoiceBtn) {
     el.previewVoiceBtn.addEventListener('click', () => speakText('BH Enterprise. Sistema de gestión documental y voz.'));
   }

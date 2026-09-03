@@ -659,8 +659,8 @@ function insertTemplateDirectly(tpl, append = false) {
     el.metaDrawerBody.style.display = 'block';
   }
 
-  // Switch to editor on mobile
-  if (window.innerWidth <= 820 && el.tabEditorBtn) {
+  // Switch to editor on mobile or if on plan tab
+  if (el.tabEditorBtn && (window.innerWidth <= 820 || state.activeTab === 'plan')) {
     el.tabEditorBtn.click();
   }
   if (el.editor) el.editor.focus();
@@ -722,7 +722,7 @@ export function initNotesListeners() {
   if (el.templatesBar) {
     el.templatesBar.querySelectorAll('.template-chip').forEach(chip => {
       chip.addEventListener('click', () => {
-        const tplKey = chip.dataset.tpl;
+        const tplKey = chip.dataset.template || chip.dataset.tpl;
         applyInstitutionalTemplate(tplKey);
       });
     });

@@ -52,6 +52,30 @@ export async function loadFolders(callbacks = {}) {
       createdAt: Date.now() + i
     }));
     await persistFolders(folders);
+  } else if (folders && folders.length === 1 && folders[0].name.toLowerCase() === 'general' && state.workspace === WORKSPACES.PERSONAL) {
+    // If only legacy single "General" folder exists, complement with the other default folders
+    const additionalDefaults = DEFAULT_PERSONAL_FOLDERS.filter(d => d.name.toLowerCase() !== 'general');
+    additionalDefaults.forEach((d, i) => {
+      folders.push({
+        id: uid(),
+        name: d.name,
+        code: d.code || null,
+        color: d.color || null,
+        createdAt: Date.now() + i
+      });
+    });
+    await persistFolders(folders);
+  } else if (folders && folders.length === 1 && state.workspace === WORKSPACES.ENTERPRISE && folders[0].name.toLowerCase() === 'general') {
+    // If in enterprise mode but only has legacy personal "General", initialize with enterprise departments
+    const defaults = DEFAULT_ENTERPRISE_FOLDERS;
+    folders = defaults.map((d, i) => ({
+      id: uid(),
+      name: d.name,
+      code: d.code || null,
+      color: d.color || null,
+      createdAt: Date.now() + i
+    }));
+    await persistFolders(folders);
   }
 
   state.folders = folders;
@@ -213,9 +237,7 @@ export function renderFolders(callbacks = {}) {
 
     li.addEventListener('click', async () => {
       if (f.id === state.activeFolderId) return;
-      if (callbacks.onFolderSelect) {
-        await callbacks.onFolderSelect(f.id);
-      }
+      await selectFolder(f.id, callbacks);
     });
 
     el.folderList.appendChild(li);
@@ -230,10 +252,36 @@ export function renderFolders(callbacks = {}) {
 export async function selectFolder(folderId, callbacks = {}) {
   state.activeFolderId = folderId;
   localStorage.setItem(getActiveFolderKey(), folderId);
+
+  // Close sidebar on mobile if open
+  if (el.sidebar) el.sidebar.classList.remove('open');
+  if (el.sidebarBackdrop) el.sidebarBackdrop.classList.remove('open');
+
   renderFolders(callbacks);
   if (callbacks.onFolderSelect) {
     await callbacks.onFolderSelect(folderId);
   }
+}
+
+export async function resetDefaultFolders(callbacks = {}) {
+  const defaults = state.workspace === WORKSPACES.ENTERPRISE ? DEFAULT_ENTERPRISE_FOLDERS : DEFAULT_PERSONAL_FOLDERS;
+  const newFolders = defaults.map((d, i) => ({
+    id: uid(),
+    name: d.name,
+    code: d.code || null,
+    color: d.color || null,
+    createdAt: Date.now() + i
+  }));
+  state.folders = newFolders;
+  state.activeFolderId = newFolders[0].id;
+  await persistFolders(newFolders);
+  localStorage.setItem(getActiveFolderKey(), state.activeFolderId);
+  renderFolders(callbacks);
+  if (callbacks.onFolderSelect) {
+    await callbacks.onFolderSelect(state.activeFolderId);
+  }
+  const term = state.workspace === WORKSPACES.ENTERPRISE ? 'departamentos' : 'carpetas';
+  setStatus(`Se han restaurado los ${defaults.length} ${term} predeterminados ✓`);
 }
 
 export async function deleteFolder(folderId, callbacks = {}) {
@@ -311,6 +359,20 @@ export function initFolderListeners(callbacks = {}) {
         e.preventDefault();
         createNewFolder(el.newFolderInput.value, callbacks);
       }
+    });
+  }
+
+  // Reset default folders button
+  if (el.resetFoldersBtn) {
+    el.resetFoldersBtn.addEventListener('click', async () => {
+      const term = state.workspace === WORKSPACES.ENTERPRISE ? 'departamentos' : 'carpetas';
+      const ok = await askConfirm(
+        `¿Restaurar ${term} por defecto?`,
+        `Se reestablecerán los ${term} predeterminados del espacio actual. Tus notas existentes no se eliminarán.`
+      );
+      if (!ok) return;
+      await resetDefaultFolders(callbacks);
+      if (el.settingsOverlay) el.settingsOverlay.classList.remove('open');
     });
   }
 

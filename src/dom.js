@@ -48,6 +48,9 @@ export const el = {
   statusLine: document.getElementById('statusLine'),
   waveform: document.getElementById('waveform'),
   currentFolioBadge: document.getElementById('currentFolioBadge'),
+  readingOverlay: document.getElementById('readingOverlay'),
+  readingText: document.getElementById('readingText'),
+  readingStopBtn: document.getElementById('readingStopBtn'),
   formalPrintBtn: document.getElementById('formalPrintBtn'),
   metaDrawerToggleBtn: document.getElementById('metaDrawerToggleBtn'),
   metaDrawerToggleText: document.getElementById('metaDrawerToggleText'),
@@ -161,6 +164,7 @@ export const el = {
   letterheadOverlay: document.getElementById('letterheadOverlay'),
   letterheadCloseX: document.getElementById('letterheadCloseX'),
   letterheadCancelBtn: document.getElementById('letterheadCancelBtn'),
+  letterheadSaveBtn: document.getElementById('letterheadSaveBtn'),
   letterheadForm: document.getElementById('letterheadForm'),
   cfgOrgName: document.getElementById('cfgOrgName'),
   cfgOrgDept: document.getElementById('cfgOrgDept'),
@@ -176,6 +180,7 @@ export const el = {
   teamCloseX: document.getElementById('teamCloseX'),
   teamCloseBtn: document.getElementById('teamCloseBtn'),
   addMemberForm: document.getElementById('addMemberForm'),
+  addMemberBtn: document.getElementById('addMemberBtn'),
   memberFullName: document.getElementById('memberFullName'),
   memberRole: document.getElementById('memberRole'),
   memberDept: document.getElementById('memberDept'),
@@ -193,6 +198,7 @@ export const el = {
   settingsOverlay: document.getElementById('settingsOverlay'),
   settingsCloseX: document.getElementById('settingsCloseX'),
   settingsCloseBtn: document.getElementById('settingsCloseBtn'),
+  resetFoldersBtn: document.getElementById('resetFoldersBtn'),
 
   // Auth & Profile
   userAuthWidget: document.getElementById('userAuthWidget'),
