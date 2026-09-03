@@ -52,9 +52,21 @@ const PUBLIC_WEBMAIL_PROVIDERS = [
 ];
 
 /**
+ * Recognized institutional TLD patterns (government, education, military, academic).
+ * Matches domains like "mineduc.gob.cl", "harvard.edu", "army.mil", "ac.uk".
+ * This is an ALLOWLIST: only domains matching these patterns are auto-classified
+ * as institutional. Any other domain (including legitimate corporate domains not
+ * covered here) defaults to "personal" until an admin/invite flow confirms the
+ * organization — this avoids silently grouping unrelated users who happen to share
+ * a webmail-like domain that isn't in PUBLIC_WEBMAIL_PROVIDERS.
+ */
+const INSTITUTIONAL_TLD_PATTERN = /\.(gob|gov|edu|mil|ac)\.[a-z]{2,3}$|\.(gov|edu|mil)$/;
+
+/**
  * Detect if an email belongs to an institutional/workspace domain or personal.
- * Inverts the logic: require recognized institutional TLDs or explicit enterprise config,
- * preventing any random webmail from inheriting an institutional workspace.
+ * Uses an allowlist of recognized institutional TLD patterns rather than a
+ * denylist of personal providers, so unrecognized domains never default to
+ * "institutional" and end up sharing an organization with strangers.
  */
 export function analyzeEmailDomain(email) {
   if (!email || typeof email !== 'string') {
@@ -69,12 +81,8 @@ export function analyzeEmailDomain(email) {
   const domain = parts[1];
   const isWebmail = PUBLIC_WEBMAIL_PROVIDERS.includes(domain);
 
-  // Check institutional signals: recognized official TLDs (.gob., .gov., .edu., .org., .ac., .mil., or verified corporate domains)
-  const isInstitutionalTld = /\.(gob|gov|edu|org|ac|mil|gva|cl|mx|ar|co|pe|es)(\.[a-z]{2})?$/.test(domain) && !isWebmail;
-  const isExplicitCustomCorp = !isWebmail && domain.includes('.') && !domain.endsWith('.com.invalid');
-
-  // Inverted check: must NOT be webmail AND must fulfill institutional requirements
-  const isInstitutional = !isWebmail && (isInstitutionalTld || isExplicitCustomCorp);
+  // Only recognized institutional TLD patterns are auto-classified as institutional.
+  const isInstitutional = !isWebmail && INSTITUTIONAL_TLD_PATTERN.test(domain);
 
   // Derive human-readable Org Name from domain
   const mainPart = domain.split('.')[0] || domain;
