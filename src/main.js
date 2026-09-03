@@ -311,6 +311,15 @@ async function initApp() {
   updateTrashBadge();
 }
 
+// Registro de Service Worker para capacidades PWA y caché offline
+if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.info('[PWA] SW registration:', err.message);
+    });
+  });
+}
+
 // Ejecutar al cargar el documento
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
